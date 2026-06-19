@@ -1,0 +1,2009 @@
+<!doctype html>
+<html lang="fr" data-lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Retour d'expérience — DGX Spark : un « Edge IA » domestique</title>
+  <style>
+    :root {
+      /* OUDS Web surface tokens (light) */
+      --bs-color-bg-primary: #fff;
+      --bs-color-bg-secondary: #f6f6f6;
+      --bs-color-border-default: #ccc;
+      --bs-color-content-default: #000;
+      --bs-color-content-muted: #666;
+      /* Orange palette */
+      --orange: #FF7900;
+      --orange-accessible: #f16e00;
+      --black: #000;
+      --white: #fff;
+      --gray-100: #f6f6f6;
+      --gray-300: #ccc;
+      --gray-600: #666;
+      --blue: #527edb;
+      --green: #50be87;
+      --purple: #a885d8;
+      --red: #cd3c14;
+      --yellow: #fc0;
+      /* Layout */
+      --sidebar-width: 260px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Helvetica Neue', Helvetica, Arial, 'Liberation Sans', sans-serif;
+      font-size: 1rem; line-height: 1.5;
+      color: var(--bs-color-content-default);
+      background: var(--bs-color-bg-primary);
+    }
+    a { color: var(--orange-accessible); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Full-width top header (OUDS app-shell pattern) — sticky, shrinks on scroll */
+    .site-header {
+      background: var(--black);
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; gap: 1.25rem;
+      padding: 1.25rem 3rem;
+      transition: padding 0.2s ease;
+    }
+    .site-header.scrolled { padding: 0.5rem 3rem; }
+    .site-header .brand-logo {
+      width: 3rem; height: 3rem; flex: 0 0 auto;
+      transition: width 0.2s ease, height 0.2s ease;
+    }
+    .site-header.scrolled .brand-logo { width: 2rem; height: 2rem; }
+    .site-header .title-block { min-width: 0; flex: 1; }
+    .site-header h1 {
+      color: var(--white);
+      font-size: 1.75rem; font-weight: 700; letter-spacing: -0.025em;
+      line-height: 1.15;
+      transition: font-size 0.2s ease;
+    }
+    .site-header.scrolled h1 { font-size: 1.125rem; }
+    .site-header .meta {
+      color: var(--gray-300); font-size: 0.875rem; margin-top: 0.25rem;
+      overflow: hidden;
+      max-height: 3em; transition: max-height 0.2s ease, margin-top 0.2s ease, opacity 0.2s ease;
+    }
+    .site-header.scrolled .meta { max-height: 0; margin-top: 0; opacity: 0; }
+
+    /* Layout below the header: sidebar + main-content side-by-side */
+    .page-wrapper { display: flex; align-items: flex-start; }
+
+    .sidebar {
+      width: var(--sidebar-width); min-width: var(--sidebar-width);
+      background: var(--bs-color-bg-primary);
+      color: var(--bs-color-content-default);
+      border-right: 1px solid var(--bs-color-border-default);
+      padding: 1rem 0;
+      position: sticky; top: var(--header-height, 96px);
+      height: calc(100vh - var(--header-height, 96px));
+      overflow-y: hidden;
+      display: flex; flex-direction: column;
+      font-size: 0.8rem;
+      transition: top 0.2s ease, height 0.2s ease;
+    }
+    .sidebar-nav { flex: 1; overflow-y: auto; padding-top: 0.25rem; }
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 1.25rem 1rem;
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--bs-color-content-muted);
+      border-top: 1px solid var(--bs-color-border-default);
+    }
+    .sidebar h3 {
+      color: var(--orange); font-size: 0.75rem;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      padding: 0.75rem 1rem 0.25rem; margin: 0;
+    }
+    .sidebar a {
+      display: block;
+      color: var(--bs-color-content-default);
+      padding: 0.3rem 1rem; text-decoration: none;
+      font-size: 0.8rem; border-left: 3px solid transparent;
+    }
+    .sidebar a:hover {
+      color: var(--orange);
+      background: rgba(255,121,0,0.08);
+      border-left-color: var(--orange);
+      text-decoration: none;
+    }
+    .sidebar a.sub { padding-left: 1.75rem; font-size: 0.75rem; color: var(--bs-color-content-muted); }
+    .sidebar a.sub:hover { color: var(--orange); }
+
+    .main-content { flex: 1; min-width: 0; background: var(--bs-color-bg-primary); }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 2rem 3rem; }
+    h2 {
+      font-size: 1.375rem; font-weight: 700;
+      margin: 2rem 0 1rem; padding-bottom: 0.5rem;
+      border-bottom: 2px solid var(--orange);
+    }
+    h3 { font-size: 1.125rem; font-weight: 700; margin: 1.5rem 0 0.75rem; }
+    h4 { font-weight: 700; margin-bottom: 0.5rem; }
+    p { margin-bottom: 1rem; }
+    ul, ol { margin-left: 1.5rem; margin-bottom: 1rem; }
+    li { margin-bottom: 0.5rem; }
+
+    .callout {
+      background: var(--bs-color-bg-secondary);
+      border-left: 4px solid var(--orange);
+      padding: 1rem 1.5rem; margin: 1.5rem 0;
+    }
+    .callout.warning { border-left-color: var(--red); background: #fef2f0; }
+    .callout.info { border-left-color: var(--blue); background: #f0f4fc; }
+    .callout.success { border-left-color: var(--green); background: #f0fdf4; }
+    .callout-title { font-weight: 700; margin-bottom: 0.25rem; }
+
+    .infographic { margin: 2rem 0; border: 1px solid var(--bs-color-border-default); }
+    .infographic img { width: 100%; display: block; }
+    .infographic-caption {
+      text-align: center; font-size: 0.875rem; color: var(--bs-color-content-muted);
+      font-style: italic; margin-top: 0.5rem;
+    }
+    .icon { width: 1.25rem; height: 1.25rem; vertical-align: middle; margin-right: 0.25rem; }
+
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0 1.5rem; font-size: 0.875rem; }
+    th {
+      background: var(--black); color: var(--orange);
+      text-align: left; padding: 0.75rem 1rem; font-weight: 700;
+    }
+    td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--bs-color-border-default); vertical-align: top; }
+    tr:nth-child(even) td { background: var(--bs-color-bg-secondary); }
+
+    .sidebar-toggle {
+      display: none; position: fixed; top: 0.5rem; left: 0.5rem; z-index: 1001;
+      background: var(--orange); color: var(--white); border: none;
+      padding: 0.5rem 0.75rem; font-size: 1.25rem; cursor: pointer;
+    }
+    .ai-footer {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.5rem 3rem;
+      background: var(--bs-color-bg-secondary);
+      border-top: 1px solid var(--bs-color-border-default);
+      font-size: 0.75rem; color: var(--bs-color-content-muted); font-style: italic;
+    }
+    .ai-footer img { width: 1rem; height: 1rem; }
+
+    @media (max-width: 900px) {
+      .sidebar {
+        position: fixed; left: -280px; top: 0; z-index: 1000;
+        transition: left 0.3s; width: 280px; min-width: 280px;
+        background: var(--bs-color-bg-primary);
+      }
+      .sidebar.open { left: 0; }
+      .sidebar-toggle { display: block; }
+      .page-wrapper { display: block; }
+      .container { padding: 1.5rem 1rem; }
+      .site-header { padding: 1.5rem 1rem; }
+      .ai-footer { padding: 0.5rem 1rem; }
+    }
+
+    .footer {
+      background: var(--black); color: var(--gray-300);
+      text-align: center; padding: 1rem;
+      font-size: 0.75rem;
+    }
+
+    @media print {
+      .site-header { padding: 1rem 2rem; }
+      .container { padding: 1rem 2rem; }
+      h2 { page-break-after: avoid; }
+      .infographic { page-break-inside: avoid; }
+      .sidebar, .sidebar-toggle, .theme-toggle, .scroll-top { display: none; }
+      .main-content { flex: 1 1 100%; }
+    }
+
+    /* Dark mode */
+    body.dark {
+      --bs-color-bg-primary: #181818;
+      --bs-color-bg-secondary: #242424;
+      --bs-color-border-default: #333;
+      --bs-color-content-default: #d4d4d4;
+      --bs-color-content-muted: #aaa;
+      --gray-100: #242424; --gray-300: #555; --gray-600: #aaa;
+    }
+    body.dark .site-header { background: #111; }
+    body.dark .sidebar { background: #0f0f0f; border-right-color: #222; }
+    body.dark .sidebar a { color: #ccc; }
+    body.dark .sidebar a.sub { color: #888; }
+    body.dark .footer { background: #111; }
+    body.dark a { color: #ff9933; }
+    body.dark h2, body.dark h3 { color: #e0e0e0; }
+    body.dark strong { color: #eee; }
+    body.dark .callout { background: #222 !important; color: #d4d4d4; }
+    body.dark .callout.warning { background: #2a1a0a !important; border-left-color: #e05a00; color: #d4d4d4; }
+    body.dark .callout.info { background: #0e1a2e !important; border-left-color: #4a7ad4; color: #d4d4d4; }
+    body.dark .callout.success { background: #0e2a1a !important; border-left-color: #40a070; color: #d4d4d4; }
+    body.dark .callout strong { color: #eee; }
+
+    .theme-toggle, .scroll-top {
+      position:fixed; z-index:200; background:var(--orange); color:#fff;
+      border:none; cursor:pointer; width:2.2rem; height:2.2rem;
+      font-size:1.1rem; opacity:0.7;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .theme-toggle { top:1rem; right:1rem; }
+    .scroll-top { bottom:2rem; right:2rem; }
+    .theme-toggle:hover, .scroll-top:hover { opacity:1; }
+
+    .highlight { background: #fff3cd; padding: 0.1rem 0.25rem; }
+    body.dark .highlight { background: #3a2a00 !important; color: #f0d060 !important; }
+
+    /* Revisions accordion (native <details>) */
+    .revisions {
+      border: 1px solid var(--bs-color-border-default);
+      background: var(--bs-color-bg-primary);
+      margin: 1rem 0 2rem;
+    }
+    .revisions > summary {
+      padding: 0.75rem 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      list-style: none;
+      display: flex; align-items: center; gap: 0.5rem;
+      color: var(--bs-color-content-default);
+    }
+    .revisions > summary::-webkit-details-marker { display: none; }
+    .revisions > summary::before {
+      content: "▸";
+      color: var(--orange);
+      transition: transform 0.15s ease;
+    }
+    .revisions[open] > summary::before { transform: rotate(90deg); }
+    .revisions table { margin: 0; font-size: 0.875rem; }
+    .revisions th { background: var(--bs-color-bg-secondary); color: var(--bs-color-content-default); }
+    .revisions td { border-top: 1px solid var(--bs-color-border-default); border-bottom: none; }
+    body.dark .revisions th { background: #222; color: #e0e0e0; }
+
+  
+    /* --- Bascule de langue FR/EN (page perso bilingue) --- */
+    html[data-lang="en"] .lang-fr { display: none !important; }
+    html[data-lang="fr"] .lang-en { display: none !important; }
+    .lang-toggle {
+      margin-left: auto; margin-right: 2.6rem; flex: 0 0 auto;
+      background: var(--orange); color: #fff; border: none; cursor: pointer;
+      font-weight: 700; padding: 0.4rem 0.85rem; font-size: 0.9rem; letter-spacing: 0.03em;
+      transition: background 0.15s ease;
+    }
+    .lang-toggle:hover { background: var(--orange-accessible); }
+    @media (max-width: 900px) { .lang-toggle { margin-right: 3.4rem; } }
+    /* Petit espace vertical en bas de la colonne de navigation */
+    .sidebar-nav { padding-bottom: 2rem; }
+</style>
+</head>
+<body>
+
+<a id="top"></a>
+<header class="site-header" id="site-header">
+  <div class="title-block">
+    <h1><span class="lang-fr">DGX Spark : un « Edge IA » domestique pour la maison connectée &amp; l'agentique</span><span class="lang-en">DGX Spark: a home "Edge AI" for the connected, agentic home</span></h1>
+    <div class="meta">
+      <span class="lang-fr">Retour d'expérience personnel | Auteur : Olivier HO-A-CHUCK | Mise à jour : 19 juin 2026 (révision 8)</span>
+      <span class="lang-en">Personal field report | Author: Olivier HO-A-CHUCK | Updated: June 19, 2026 (revision 8)</span>
+    </div>
+  </div>
+  <button class="lang-toggle" id="lang-toggle" onclick="toggleLang()" title="Français / English">EN</button>
+</header>
+
+<button class="theme-toggle" onclick="document.body.classList.toggle('dark');localStorage.setItem('theme',document.body.classList.contains('dark')?'dark':'light')" title="Clair / sombre">&#9681;</button>
+<button class="scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">&#8593;</button>
+<button class="sidebar-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+
+<div class="page-wrapper">
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-nav lang-fr">
+    <h3>Sommaire</h3>
+    <a href="#pari">1. Le pari</a>
+    <a href="#materiel">2. Le matériel — DGX Spark (GB10)</a>
+    <a href="#architecture">3. Architecture d'ensemble</a>
+    <a href="#llm">4. Servir des LLM en local</a>
+    <a class="sub" href="#dissociation">4.1 Ollama / Open WebUI dissociés</a>
+    <a class="sub" href="#maj">4.2 Mettre à jour les conteneurs</a>
+    <a href="#cloudflare">5. Exposer sans ouvrir de ports</a>
+    <a href="#tailscale">6. Accès privé — Tailscale</a>
+    <a href="#sortify">7. Use case « Sortify »</a>
+    <a href="#openwebui">8. Open WebUI personnel</a>
+    <a href="#maison">9. La maison — Home Assistant &amp; Hermès</a>
+    <a class="sub" href="#home-assistant">9.1 Home Assistant (hub local)</a>
+    <a class="sub" href="#hermes">9.2 Hermès, l'agent autonome</a>
+    <a href="#miroir">10. Le miroir connecté augmenté</a>
+    <a class="sub" href="#magicmirror">10.1 MagicMirror² sur le DGX</a>
+    <a class="sub" href="#voix">10.2 Voix locale (STT / TTS)</a>
+    <a class="sub" href="#visage">10.3 Reconnaissance faciale</a>
+    <a class="sub" href="#gestes">10.4 Gestes « Minority Report »</a>
+    <a class="sub" href="#hermes-miroir">10.5 Hermès × miroir</a>
+    <a class="sub" href="#pages-perso">10.6 Pages au visage</a>
+    <a class="sub" href="#ecrans-miroir">10.7 Démo — visage, gestes &amp; écrans du miroir</a>
+    <a href="#code">11. Coder en local</a>
+    <a class="sub" href="#opencode">11.1 OpenCode</a>
+    <a class="sub" href="#kilocode">11.2 KiloCode</a>
+    <a class="sub" href="#claude-code">11.3 Claude Code (hack proxy)</a>
+    <a class="sub" href="#demo-3d">11.4 Démo site web 3D</a>
+    <a class="sub" href="#xcode">11.5 Xcode + Snake</a>
+    <a href="#performances">12. Performances &amp; ressources</a>
+    <a class="sub" href="#dgx-mon">12.1 Le DGX sous charge (dgx-mon)</a>
+    <a href="#nemoclaw">13. Guide d'installation NemoClaw</a>
+    <a href="#deerflow">14. DeerFlow (exploration)</a>
+    <a href="#bilan">15. Bilan &amp; perspectives</a>
+  </div>
+  <div class="sidebar-nav lang-en">
+    <h3>Contents</h3>
+    <a href="#pari-en">1. The bet</a>
+    <a href="#materiel-en">2. The hardware — DGX Spark (GB10)</a>
+    <a href="#architecture-en">3. Overall architecture</a>
+    <a href="#llm-en">4. Serving LLMs locally</a>
+    <a class="sub" href="#dissociation-en">4.1 Ollama / Open WebUI decoupled</a>
+    <a class="sub" href="#maj-en">4.2 Updating the containers</a>
+    <a href="#cloudflare-en">5. Exposing without opening ports</a>
+    <a href="#tailscale-en">6. Private access — Tailscale</a>
+    <a href="#sortify-en">7. Use case "Sortify"</a>
+    <a href="#openwebui-en">8. Personal Open WebUI</a>
+    <a href="#maison-en">9. The home — Home Assistant &amp; Hermès</a>
+    <a class="sub" href="#home-assistant-en">9.1 Home Assistant (local hub)</a>
+    <a class="sub" href="#hermes-en">9.2 Hermès, the autonomous agent</a>
+    <a href="#miroir-en">10. The augmented smart mirror</a>
+    <a class="sub" href="#magicmirror-en">10.1 MagicMirror² on the DGX</a>
+    <a class="sub" href="#voix-en">10.2 Local voice (STT / TTS)</a>
+    <a class="sub" href="#visage-en">10.3 Face recognition</a>
+    <a class="sub" href="#gestes-en">10.4 "Minority Report" gestures</a>
+    <a class="sub" href="#hermes-miroir-en">10.5 Hermès × mirror</a>
+    <a class="sub" href="#pages-perso-en">10.6 Face-triggered pages</a>
+    <a class="sub" href="#ecrans-miroir-en">10.7 Demo — face, gestures &amp; mirror screens</a>
+    <a href="#code-en">11. Coding locally</a>
+    <a class="sub" href="#opencode-en">11.1 OpenCode</a>
+    <a class="sub" href="#kilocode-en">11.2 KiloCode</a>
+    <a class="sub" href="#claude-code-en">11.3 Claude Code (proxy hack)</a>
+    <a class="sub" href="#demo-3d-en">11.4 3D website demo</a>
+    <a class="sub" href="#xcode-en">11.5 Xcode + Snake</a>
+    <a href="#performances-en">12. Performance &amp; resources</a>
+    <a class="sub" href="#dgx-mon-en">12.1 The DGX under load (dgx-mon)</a>
+    <a href="#nemoclaw-en">13. NemoClaw install guide</a>
+    <a href="#deerflow-en">14. DeerFlow (exploration)</a>
+    <a href="#bilan-en">15. Wrap-up &amp; outlook</a>
+  </div>
+</nav>
+
+<main class="main-content">
+
+  <div class="lang-fr">
+    <div class="container">
+  <div class="callout">
+    <div class="callout-title">Résumé exécutif</div>
+    <p>Retour d'expérience personnel sur l'usage d'un NVIDIA DGX Spark (GB10) comme socle d'« edge computing » d'IA à domicile : servir des LLM en local (Ollama / Open WebUI), exposer une API sans ouvrir de port (Cloudflare Tunnel) et s'y connecter en privé (Tailscale), trier ses documents par IA (Sortify, Qwen3.6:35b), coder avec les modèles locaux dans tous ses éditeurs (Claude Code, OpenCode, KiloCode, Xcode), et augmenter un miroir connecté qui voit, écoute, comprend et se pilote au geste — le tout sans qu'aucune donnée personnelle ne quitte la maison.</p>
+    <p><strong>Mots-clés</strong> : DGX Spark --- Edge AI --- Agentic --- Dev local (Claude Code · OpenCode · Xcode) --- Domotique --- Privacy --- Ollama --- Tailscale --- Cloudflare</p>
+  </div>
+    </div>
+    <div class="container">
+<div class="infographic"><img src="images/infographie-hero.png" alt="Schéma fonctionnel : le DGX Spark au centre et ses usages domestiques"/></div>
+<p class="infographic-caption">En un coup d'œil — le DGX au centre, ses usages (documents, LLM, dev, miroir, agent, maison) et les voies d'accès (LAN · Tailscale · Cloudflare). Le détail dans les sections ci-dessous.</p>
+
+<h2 id="pari">1. Le pari : un datacenter d'IA privé à la maison</h2>
+
+<p>Ce document est un <strong>retour d'expérience personnel</strong>. Il raconte comment un
+<strong>NVIDIA DGX Spark</strong> — une petite machine d'IA posée à la maison — est devenu le
+cœur d'un écosystème domestique : un serveur de modèles de langage, un agent autonome, un hub
+domotique, et un miroir connecté qui voit, écoute et comprend. Le tout en restant fidèle à un
+principe simple : <strong>les données personnelles ne quittent pas la maison</strong>.</p>
+
+<p>Le fil rouge est celui de l'<em>edge computing</em> appliqué au foyer. Plutôt que d'envoyer
+ses documents, ses conversations et l'image de son salon vers un cloud, on rapatrie le calcul
+là où vivent les données. Le DGX Spark rend ce pari tenable : il est assez puissant pour faire
+tourner des modèles de 30 à 70 milliards de paramètres, de la vision par ordinateur et de la
+synthèse vocale <em>en même temps</em>, et assez sobre pour rester allumé en permanence dans un
+appartement.</p>
+
+<div class="callout info">
+  <div class="callout-title">À qui s'adresse ce retour d'expérience</div>
+  <p>Il se veut lisible par des passionnés (l'architecture et les pièges techniques y sont) comme
+  par un public curieux (chaque brique est expliquée par ce qu'elle <em>apporte</em>, pas seulement
+  par sa mécanique). C'est le rapport détaillé d'une présentation plus synthétique préparée pour le
+  meetup <strong>« Agentic in a Box »</strong> (TechUp, avec NVIDIA et Orange).</p>
+</div>
+
+<h2 id="materiel">2. Le matériel : NVIDIA DGX Spark (GB10)</h2>
+
+<p>Le DGX Spark est bâti autour de la superpuce <strong>GB10 Grace Blackwell</strong> (un CPU Arm
+et un GPU Blackwell sur le même paquet) et de <strong>128 Go de mémoire unifiée</strong> partagée
+entre le CPU et le GPU. Cette mémoire unifiée est la clé : il n'y a pas à copier les données d'un
+espace « CPU » vers un espace « GPU ». Un seul réservoir accueille le modèle de langage, les
+modèles de vision et l'agent — qui cohabitent sans se marcher dessus.</p>
+
+<div class="infographic"><img src="images/infographie-gb10.png" alt="Caractéristiques du DGX Spark GB10 et comparaison edge contre cloud"/></div>
+<p class="infographic-caption">Figure 1 — Le GB10 et pourquoi l'edge domestique a du sens face au cloud.</p>
+
+<p>Concrètement, pour un usage domestique, trois propriétés comptent plus que les chiffres bruts :
+la machine est <strong>compacte et silencieuse</strong>, elle consomme peu, et elle est
+<strong>toujours allumée</strong>. Elle devient de fait un <em>serveur d'IA domestique 24/7</em> :
+le mobile et le Mac lui délèguent les tâches lourdes et restent légers.</p>
+
+<h2 id="architecture">3. Architecture d'ensemble</h2>
+
+<p>Avant d'entrer dans le détail, voici la vue d'ensemble. Le DGX est au centre ; autour de lui
+gravitent les couches d'exposition (publique via Cloudflare, privée via Tailscale), les usages
+(LLM, agent, domotique, perception, voix, affichage) et l'écosystème de périphériques.</p>
+
+<div class="infographic"><img src="images/infographie-architecture.png" alt="Schéma d'architecture d'ensemble du DGX Spark domestique"/></div>
+<p class="infographic-caption">Figure 2 — Le DGX Spark comme « edge IA » domestique : une seule machine, plusieurs métiers.</p>
+
+<h2 id="llm">4. Servir des LLM en local</h2>
+
+<h3 id="dissociation">4.1 Ollama et Open WebUI : dissocier pour gagner en flexibilité</h3>
+
+<p>Le socle est composé de deux briques bien connues : <strong>Ollama</strong> (le moteur
+d'inférence qui charge les modèles sur le GPU) et <strong>Open WebUI</strong> (l'interface de chat
+web). Le choix structurant a été de les faire tourner dans <strong>deux conteneurs Docker
+distincts</strong>, et non dans l'image « tout-en-un » qui les empaquette ensemble.</p>
+
+<p>Pourquoi ? Pour deux raisons concrètes :</p>
+<ul>
+  <li><strong>Découpler les mises à jour.</strong> Ollama sort très souvent (nouveaux modèles,
+  optimisations GPU). Dans l'image groupée, Ollama reste en retard car il n'est reconstruit qu'au
+  rythme d'Open WebUI. Dissociés, on met à jour l'un sans toucher l'autre.</li>
+  <li><strong>Exposer Ollama comme une API.</strong> En isolant Ollama derrière son propre point
+  d'entrée, on peut lui donner un nom de domaine et l'utiliser comme une
+  <strong>API LLM compatible OpenAI</strong> depuis n'importe quelle application — c'est ce qui rend
+  possible le use case Sortify (§7).</li>
+</ul>
+
+<table>
+  <thead><tr><th>Conteneur</th><th>Rôle</th><th>Exposition</th></tr></thead>
+  <tbody>
+    <tr><td>ollama</td><td>Moteur d'inférence (accès GPU)</td><td>localhost uniquement, derrière nginx</td></tr>
+    <tr><td>open-webui</td><td>Interface de chat web</td><td>localhost uniquement, derrière nginx</td></tr>
+    <tr><td>watchtower</td><td>Mise à jour automatique des images officielles</td><td>—</td></tr>
+  </tbody>
+</table>
+
+<p>Une vingtaine de modèles cohabitent sur la machine (du petit modèle rapide pour les tests
+jusqu'à des modèles de 35 à 70 milliards de paramètres), stockés sur un volume persistant qui
+survit aux recréations de conteneur. Le modèle de travail principal pour le tri documentaire est
+<strong>Qwen3.6:35b</strong>.</p>
+
+<h3 id="maj">4.2 Mettre à jour les conteneurs : automatique là où c'est sûr, manuel là où c'est risqué</h3>
+
+<p>La stratégie de mise à jour est <strong>différenciée selon le risque</strong> :</p>
+<ul>
+  <li><strong>Images officielles à interface stable</strong> (Ollama, Open WebUI) :
+  <strong>Watchtower</strong> vérifie chaque nuit s'il existe une nouvelle image, la télécharge et
+  recrée le conteneur avec les mêmes paramètres. Zéro intervention.</li>
+  <li><strong>Images construites localement</strong> (l'agent Hermès, §9.2) :
+  <strong>mise à jour manuelle et supervisée</strong>. Watchtower ne sait pas les reconstruire, et
+  surtout un agent autonome sur un dépôt amont qui bouge des dizaines de fois par jour mérite un
+  pull contrôlé, pas un pull aveugle. On a donc mis en place une <em>veille</em> qui notifie quand
+  une mise à jour existe, et un script d'<em>application sûre</em> avec bascule de retour arrière
+  (<em>rollback</em>) automatique si le démarrage échoue.</li>
+</ul>
+
+<div class="callout">
+  <div class="callout-title">Leçon</div>
+  <p>« Tout auto-updater » est une fausse bonne idée. On automatise ce qui est stable et sans surface
+  d'attaque entrante ; on garde la main sur ce qui est fragile ou exposé. La bonne granularité de
+  mise à jour est une <strong>décision d'architecture</strong>, pas un réglage par défaut.</p>
+</div>
+
+<h2 id="cloudflare">5. Exposer sans ouvrir de ports : Cloudflare Tunnel</h2>
+
+<p>Comment utiliser l'API Ollama ou l'interface Open WebUI depuis l'extérieur, en mobilité, sans
+transformer sa box Internet en passoire ? La réponse retenue : <strong>ne jamais ouvrir de port
+entrant</strong>, et router le trafic par un <strong>tunnel sortant</strong> avec
+<strong>Cloudflare Tunnel</strong> (le démon <code>cloudflared</code>).</p>
+
+<div class="infographic"><img src="images/infographie-securite.png" alt="Schémas de sécurité Cloudflare Tunnel et Tailscale, sans port ouvert"/></div>
+<p class="infographic-caption">Figure 3 — Deux voies d'accès, une seule règle : aucune redirection de port entrante sur la box.</p>
+
+<p>Le principe : c'est <strong>le DGX qui initie la connexion</strong> vers le réseau Cloudflare
+(connexion sortante, comme quand un navigateur va sur un site). Cloudflare devient le point d'entrée
+public (par exemple <code>https://ollama.example.com</code>), et fait redescendre les requêtes par
+ce tunnel déjà ouvert de l'intérieur. <strong>La box Internet n'a aucune redirection de port</strong> :
+vue de l'extérieur, il n'y a tout simplement rien à attaquer.</p>
+
+<p>En quoi est-ce sûr ?</p>
+<ul>
+  <li><strong>Surface d'attaque entrante nulle.</strong> Aucun port ouvert = aucun service exposé à
+  scanner ou à forcer depuis Internet.</li>
+  <li><strong>TLS et filtrage en amont.</strong> Le chiffrement et une première barrière anti-abus
+  sont assurés par le réseau Cloudflare, avant même d'atteindre la maison.</li>
+  <li><strong>Authentification applicative.</strong> Derrière le tunnel, un <strong>nginx</strong>
+  local impose un <strong>jeton Bearer</strong> sur l'API Ollama. Les secrets vivent côté serveur,
+  en mode restreint, jamais dans le code ni dans la documentation. <em>Seule l'API Ollama est
+  exposée publiquement</em> : l'interface Open WebUI, elle, n'est plus accessible depuis Internet
+  (voir §8).</li>
+</ul>
+
+<div class="callout warning">
+  <div class="callout-title">Le revers de la médaille — un point de privacy à comprendre</div>
+  <p>Cloudflare Tunnel est un <strong>reverse-proxy qui termine le TLS à son edge</strong> : c'est
+  Cloudflare qui présente le certificat de <code>ollama.example.com</code>, donc il
+  <strong>déchiffre</strong> la requête à son entrée, puis la re-chiffre vers le DGX. Autrement dit,
+  au point de passage Cloudflare, le contenu est <strong>en clair</strong> — y compris les
+  <em>prompts</em> et, le cas échéant, le contenu des documents envoyés à l'API. <strong>Ce n'est
+  pas du chiffrement de bout en bout.</strong> On déplace donc une part de confiance vers un tiers,
+  comme avec n'importe quel CDN.</p>
+  <p>Trois précisions importantes pour relativiser — et bien arbitrer :</p>
+  <ul>
+    <li><strong>Cela ne concerne QUE le trafic qui sort par le domaine public.</strong> À la maison
+    (LAN) ou via Tailscale, les applications — dont Sortify — appellent le DGX
+    <strong>directement</strong> : Cloudflare n'est alors pas du tout dans le chemin.</li>
+    <li><strong>C'est un modèle de confiance, pas une faille.</strong> On s'appuie sur la politique
+    de Cloudflare (ne pas inspecter ni conserver le contenu proxifié), exactement comme on fait
+    confiance à un CDN ou à un hébergeur. Acceptable pour des usages courants, discutable pour des
+    données très sensibles.</li>
+    <li><strong>Pour zéro tiers dans le chemin, privilégier Tailscale (§6).</strong> En accédant à
+    l'API Ollama <em>via le tailnet</em> plutôt que via le domaine public, la liaison est chiffrée de
+    bout en bout (WireGuard) et Cloudflare sort du circuit. On réserve alors Cloudflare au partage
+    réellement public et non confidentiel.</li>
+  </ul>
+  <p>C'est aussi pourquoi, pour l'<em>accès d'administration</em> (SSH, VNC), on ne passe jamais par
+  un service public : Tailscale uniquement.</p>
+</div>
+
+<h2 id="tailscale">6. Accès privé : Tailscale, un réseau entre mes appareils</h2>
+
+<p>Pour administrer le DGX (et le Mac) depuis l'iPhone ou l'iPad <em>de n'importe où</em> — ouvrir
+une session SSH, prendre la main en VNC sur l'écran — on utilise <strong>Tailscale</strong>. C'est un
+<strong>VPN maillé</strong> bâti sur le protocole <strong>WireGuard</strong> : tous mes appareils
+(iPhone, iPad, Mac, DGX) rejoignent un même <strong>réseau privé chiffré</strong> (un « tailnet »),
+et se parlent directement, comme s'ils étaient sur le même LAN — où qu'ils soient physiquement.</p>
+
+<p>Comme pour Cloudflare, le point clé est qu'<strong>aucun port n'est ouvert sur la box</strong> :
+chaque appareil établit une connexion sortante vers le service de coordination, puis les pairs
+communiquent en direct via un tunnel WireGuard chiffré de bout en bout. Chaque nœud reçoit une
+adresse stable (en <code>100.x</code>) qui n'est jamais routée sur l'Internet public.</p>
+
+<h3>Quel niveau de confiance — et quelles vigilances ?</h3>
+
+<p>Le modèle est dit <strong>« zero-trust »</strong> : on ne fait pas confiance au réseau (le Wi-Fi
+d'un hôtel, la 5G), mais à l'<strong>identité authentifiée de chaque appareil</strong>. C'est solide,
+à condition de connaître les points de vigilance :</p>
+
+<table>
+  <thead><tr><th>Ce qui protège</th><th>Ce sur quoi rester vigilant</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Chiffrement WireGuard (réputé robuste), de bout en bout.</td>
+      <td>Le <strong>compte SSO</strong> qui pilote le tailnet devient « la clé du royaume » →
+      <strong>authentification multifacteur obligatoire</strong> sur ce compte.</td>
+    </tr>
+    <tr>
+      <td>Identité par appareil : un device non autorisé n'entre pas.</td>
+      <td>Le <strong>serveur de coordination</strong> (Tailscale) est un <strong>tiers de
+      confiance</strong> : il orchestre les clés (mais ne voit pas le contenu du trafic).</td>
+    </tr>
+    <tr>
+      <td>SSH durci en complément : <strong>connexion par clé uniquement</strong>, mot de passe
+      refusé, liste blanche d'utilisateurs.</td>
+      <td><strong>Désactiver l'expiration des clés</strong> sur les nœuds clés (sinon perte d'accès
+      à distance au pire moment) ; <strong>révoquer immédiatement</strong> un appareil perdu.</td>
+    </tr>
+    <tr>
+      <td>Aucune surface publique : rien à scanner depuis Internet.</td>
+      <td>Garder les <strong>règles d'accès (ACL) au plus juste</strong> : un appareil ne devrait
+      joindre que ce dont il a besoin.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Où placer exactement la confiance : plan de données vs plan de contrôle</h3>
+
+<p>Pour bien jauger la solution, il faut séparer <strong>deux plans</strong> — et on ne leur accorde
+pas le même niveau de confiance :</p>
+
+<ul>
+  <li><strong>Le plan de données (ton trafic) — tu ne fais PAS confiance à Tailscale ici.</strong>
+  Le chiffrement est <strong>WireGuard de bout en bout</strong> et les <strong>clés privées ne
+  quittent jamais tes appareils</strong> : Tailscale ne peut pas déchiffrer ton trafic. Même quand la
+  connexion directe pair-à-pair échoue et que le flux passe par un <strong>relais DERP</strong> de
+  Tailscale, ce relais ne voit que des <strong>paquets chiffrés</strong> opaques. La confidentialité
+  ne dépend donc pas de la confiance dans Tailscale — c'est le point fort majeur.</li>
+  <li><strong>Le plan de contrôle (le serveur de coordination) — c'est là qu'est la confiance
+  résiduelle.</strong> Il ne voit pas le contenu, mais il <strong>distribue les clés publiques et les
+  ACL</strong> et s'appuie sur ton fournisseur d'identité (SSO). Le risque théorique : un serveur de
+  coordination compromis pourrait <strong>injecter un nœud pirate</strong> dans le tailnet
+  (substitution de clé). Il constitue aussi un point de <strong>disponibilité</strong> (s'il tombe,
+  les liaisons existantes tiennent, mais l'ajout/renouvellement de nœuds ne se fait plus).</li>
+</ul>
+
+<p>Bonne nouvelle : cette confiance résiduelle se <strong>réduit, voire s'élimine</strong> :</p>
+<ul>
+  <li><strong>Tailnet Lock</strong> (fonction native) : les nouveaux nœuds doivent être
+  <strong>signés par tes propres appareils de confiance</strong> — même Tailscale ne peut alors plus
+  ajouter un device sans ta signature. C'est la parade directe à l'injection de nœud.</li>
+  <li><strong>Headscale</strong> : une réimplémentation <strong>open-source du plan de contrôle</strong>,
+  auto-hébergeable, qui sort complètement Tailscale Inc. de la boucle (au prix de l'exploitation).</li>
+  <li>À l'extrême, <strong>WireGuard nu</strong> : aucun serveur de coordination, mais clés et
+  traversée de NAT à gérer soi-même.</li>
+</ul>
+
+<div class="callout info">
+  <div class="callout-title">Le verdict de confiance</div>
+  <p>Confiance <strong>forte par défaut</strong> : chiffrement de bout en bout, clés locales, client
+  <strong>open-source</strong>, WireGuard audité, éditeur au bon historique sécurité. Le
+  <strong>risque pratique n°1 reste ton compte SSO</strong> (sa compromission = accès au tailnet) →
+  MFA non négociable. Et si l'on veut un « zéro confiance au tiers », on active
+  <strong>Tailnet Lock</strong> (rapide) ou l'on passe à <strong>Headscale</strong> (radical).</p>
+</div>
+
+<div class="callout info">
+  <div class="callout-title">Cloudflare et Tailscale, deux outils complémentaires</div>
+  <p><strong>Cloudflare Tunnel</strong> sert à exposer des <em>services publics</em> (une API, une UI)
+  à des tiers, avec authentification. <strong>Tailscale</strong> sert à se donner un <em>accès privé
+  d'administration</em> à ses propres machines. Les deux partagent la même règle d'or : on ne perce
+  jamais la box. Ensemble, ils couvrent l'exposition publique <em>et</em> l'accès privé sans aucun
+  port entrant.</p>
+</div>
+
+<h2 id="sortify">7. Use case « Sortify » : le tri documentaire par IA</h2>
+
+<p><strong>Sortify</strong> est une application (Mac, iPhone, iPad) qui s'attaque à une corvée
+universelle : la paperasse. Tout document qui arrive — pièce jointe d'e-mail, scan de l'imprimante,
+fichier déposé dans un dossier « inbox », photo prise au mobile — est capté, <strong>analysé par
+IA</strong>, puis <strong>indexé et rangé</strong> automatiquement. On scanne et on oublie : l'IA
+classe et retrouve à notre place.</p>
+
+<div class="infographic"><img src="images/infographie-sortify.png" alt="Flux de traitement documentaire de Sortify via le DGX"/></div>
+<p class="infographic-caption">Figure 4 — De la source au classement : le client capte, le DGX comprend.</p>
+
+<p>Le point central, c'est <strong>où</strong> se fait l'analyse. Les documents sont traités par le
+modèle <strong>Qwen3.6:35b hébergé sur Ollama, sur le DGX Spark</strong>. L'application cliente reste
+légère : elle capture, met en file d'attente, et délègue le gros du travail à la machine toujours
+allumée. Résultat : on peut <strong>scanner un document depuis son mobile sans se soucier de la
+latence ni de la mémoire</strong> — et c'est pareil sur le Mac.</p>
+
+<div style="display:flex;flex-wrap:wrap;gap:1rem;margin:1.5rem 0;">
+  <div style="flex:1;min-width:320px;">
+    <div class="infographic"><img src="images/sortify-mac-analysed.png" alt="Sortify sur Mac : document analysé et classé"/></div>
+    <p class="infographic-caption">Sortify sur Mac — un document analysé, résumé et catégorisé.</p>
+  </div>
+  <div style="flex:1;min-width:320px;">
+    <div class="infographic"><img src="images/sortify-mac-chat.png" alt="Sortify sur Mac : chat avec un document"/></div>
+    <p class="infographic-caption">Sortify sur Mac — « chat avec le document » : poser une question sur son contenu.</p>
+  </div>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:1.5rem;justify-content:center;margin:1.5rem 0;">
+  <div style="max-width:300px;">
+    <div class="infographic"><img src="images/sortify-iphone-analysed.png" alt="Sortify sur iPhone : document analysé"/></div>
+    <p class="infographic-caption">Sur iPhone — analyse d'un document scanné en mobilité.</p>
+  </div>
+  <div style="max-width:300px;">
+    <div class="infographic"><img src="images/sortify-iphone-chat.png" alt="Sortify sur iPhone : chat avec un document"/></div>
+    <p class="infographic-caption">Sur iPhone — questions/réponses sur un document, le calcul se fait sur le DGX.</p>
+  </div>
+</div>
+
+<p>Ce que le DGX change, en trois points :</p>
+<ul>
+  <li><strong>Un modèle 35B à la maison</strong> : impensable à embarquer sur un iPhone ou un Mac
+  sans le faire chauffer ni vider la batterie. La taille de modèle débloque la qualité d'analyse.</li>
+  <li><strong>Confidentialité</strong> : factures, contrats, courriers administratifs… sont
+  <strong>analysés sur le DGX</strong>, jamais sur un service d'IA tiers. À la maison (LAN) ou via
+  Tailscale, le contenu ne quitte pas le réseau domestique. Pour un accès distant par le domaine
+  public, le trafic transite par Cloudflare (cf. la mise en garde du §5) — d'où l'intérêt de
+  privilégier Tailscale pour les documents les plus sensibles.</li>
+  <li><strong>Coût marginal nul</strong> : on traite des milliers de documents sans facturation au
+  token.</li>
+</ul>
+
+<h2 id="openwebui">8. Open WebUI personnel : un ChatGPT-like privé, accessible par Tailscale</h2>
+
+<p>L'interface <strong>Open WebUI</strong> offre un <strong>« ChatGPT-like » privé</strong> :
+mêmes usages qu'un assistant grand public — reformuler un courrier sensible, analyser un document
+confidentiel, préparer une démarche administrative — mais <strong>la conversation et les pièces
+jointes restent sur le DGX</strong>, jamais sur un service tiers. C'est l'outil idéal pour les
+tâches du quotidien qui touchent à des <strong>données personnelles</strong>.</p>
+
+<h3>Pourquoi on l'a retiré de l'accès public</h3>
+<p>Open WebUI était d'abord exposé comme l'API (§5), derrière le tunnel Cloudflare avec une
+<strong>authentification basique</strong> (HTTP Basic Auth) au niveau de nginx. À la réflexion,
+c'est un maillon trop faible pour une interface qui donne accès à des données personnelles :</p>
+<ul>
+  <li>la Basic Auth n'a <strong>ni limitation de débit, ni verrouillage de compte, ni MFA</strong>
+  → elle est exposée au <strong>bruteforce en ligne</strong> et au <em>credential-stuffing</em> ;</li>
+  <li>les identifiants sont renvoyés <strong>à chaque requête</strong> (leur seule protection en
+  transit est le TLS) ;</li>
+  <li>la sécurité se réduit alors à la robustesse d'un mot de passe.</li>
+</ul>
+
+<p>Plutôt que de durcir un point d'entrée public (ajouter du rate-limiting, voire un portail
+d'identité devant), on a fait le choix le plus simple et le plus sûr : <strong>supprimer purement
+et simplement l'exposition publique</strong> d'Open WebUI. Il n'est désormais accessible
+<strong>que via Tailscale</strong> (et sur le réseau local). On accède à l'interface par l'adresse
+privée du DGX sur le tailnet — la liaison est chiffrée de bout en bout (WireGuard), et il n'y a
+<strong>plus rien à bruteforcer depuis Internet</strong>. Open WebUI conserve par-dessus sa propre
+authentification applicative (comptes/login).</p>
+
+<div class="callout success">
+  <div class="callout-title">La bonne réponse à un maillon faible : le retirer, pas le rafistoler</div>
+  <p>Quand une protection est structurellement faible (ici la Basic Auth), la mettre derrière un
+  réseau privé authentifié (Tailscale) est souvent plus robuste — et plus simple — que d'empiler des
+  rustines sur un endpoint public. On réserve l'exposition publique (Cloudflare) à ce qui en a
+  vraiment besoin : l'API Ollama, protégée par jeton.</p>
+</div>
+
+<h2 id="maison">9. La maison : Home Assistant &amp; Hermès</h2>
+
+<h3 id="home-assistant">9.1 Home Assistant, le hub domotique local</h3>
+
+<p><strong>Home Assistant</strong> tourne en conteneur sur le DGX et joue le rôle de <strong>hub
+domotique local-first (zéro cloud)</strong>. Il agrège les équipements de la maison et leur donne
+un langage commun :</p>
+<ul>
+  <li>la box domotique <strong>Fibaro</strong> (maître Z-Wave) reste en place ; Home Assistant la
+  surcouche et expose tous les appareils en entités ;</li>
+  <li>les enceintes <strong>Sonos</strong> (découvertes automatiquement) deviennent des sorties audio
+  pilotables — c'est par elles que la maison « parle » ;</li>
+  <li>un <strong>bus de messages MQTT</strong> (un broker Mosquitto local) sert de système nerveux :
+  c'est là que la perception (visage, gestes, présence) publie ses événements, et que les autres
+  briques s'y abonnent.</li>
+</ul>
+
+<p>Tout reste sur le réseau local. Le hub qui pilote la maison n'est <strong>pas</strong> exposé sur
+Internet : on y accède en LAN ou via Tailscale, jamais via un service public.</p>
+
+<h3 id="hermes">9.2 Hermès, l'agent autonome (« Cynthia »)</h3>
+
+<p><strong>Hermès</strong> est un agent autonome (projet open-source de Nous Research) qui tourne en
+conteneur sur le DGX, <strong>branché sur le LLM local</strong> servi par Ollama. C'est le « cerveau »
+qui peut raisonner, enchaîner des outils et agir. On l'a personnifié sous le nom de
+<strong>Cynthia</strong>.</p>
+
+<p>Aujourd'hui, on lui parle de deux manières :</p>
+<ul>
+  <li><strong>Telegram</strong> : un bot privé (avec liste blanche d'utilisateurs) permet de lui
+  écrire de n'importe où — « fais-moi une synthèse météo + agenda + anniversaires ce matin »,
+  « mets telle info sur l'écran du miroir »… L'agent dispose de <em>skills</em> (envoi d'e-mail,
+  lecture/écriture d'agenda, etc.) et d'un planificateur de tâches interne.</li>
+  <li><strong>Home Assistant</strong> : Hermès est intégré au hub, ce qui lui permet d'agir sur la
+  maison (annonces, appareils) et d'être déclenché par elle.</li>
+</ul>
+
+<div class="callout info">
+  <div class="callout-title">La prochaine étape : la voix « mains libres »</div>
+  <p>En attendant, l'interaction se fait au clavier (Telegram) ou via le pipeline vocal du miroir
+  (§10.2). L'objectif est une <strong>capture audio dédiée</strong> — soit via l'<strong>Apple
+  Watch</strong> (déclencheur au poignet), soit via un <strong>mot d'activation (« wakeword ») et un
+  micro au niveau du miroir</strong> — pour parler à Cynthia sans rien toucher.</p>
+</div>
+
+<p>Point de sécurité notable : l'agent n'est exposé sur <strong>aucun port entrant</strong>. Côté
+Telegram, c'est lui qui <em>sort</em> interroger les serveurs (polling) ; son tableau de bord, qui
+stocke des clés, est lié à <code>127.0.0.1</code> et joignable seulement via un tunnel SSH. Là encore,
+rien n'est ouvert sur l'extérieur.</p>
+
+<h2 id="miroir">10. Le miroir connecté augmenté</h2>
+
+<p>C'est la vitrine du projet : un <strong>miroir connecté</strong> (un écran derrière une vitre sans
+tain) qui affiche l'heure, la météo, l'agenda… mais surtout qui <strong>voit, écoute, comprend et
+réagit</strong>. Toute l'intelligence est hébergée sur le DGX.</p>
+
+<h3 id="magicmirror">10.1 MagicMirror² hébergé sur le DGX</h3>
+
+<p>L'affichage repose sur <strong>MagicMirror²</strong> (une application Electron open-source) qui
+tourne en kiosque sur l'écran HDMI branché au DGX, avec connexion automatique au démarrage. On y a
+ajouté des modules tiers (calendrier, météo, mémos, bourse, domotique Fibaro…) et surtout un module
+<strong>maison, écrit et audité par nos soins</strong> : <code>MMM-SparkNav</code>, qui gère un jeu
+de <strong>pages</strong> et la <strong>navigation</strong>.</p>
+
+<div class="callout">
+  <div class="callout-title">Choix de design : pas de code tiers non audité</div>
+  <p>Pour les briques sensibles (navigation, pages poussées par l'agent), on a écrit des modules
+  maison plutôt que d'installer des extensions non vérifiées. Sur une machine qui voit le salon et
+  manipule des données personnelles, <strong>la confiance dans le code qui tourne est une exigence
+  de sécurité</strong>.</p>
+</div>
+
+<h3 id="voix">10.2 Voix locale : reconnaissance et synthèse vocales (STT / TTS)</h3>
+
+<p>La voix s'appuie sur le pipeline « Assist » de Home Assistant, alimenté par des conteneurs
+<strong>Wyoming</strong> qui tournent sur le DGX. L'architecture distingue <strong>deux voies</strong>
+selon l'intention :</p>
+
+<div class="infographic"><img src="images/infographie-voix.png" alt="Pipeline vocal local STT/TTS et références NVIDIA"/></div>
+<p class="infographic-caption">Figure 5 — Deux voies vocales : rapide pour la domotique, intelligente pour l'agent.</p>
+
+<table>
+  <thead><tr><th>Voie</th><th>Reconnaissance (STT)</th><th>Usage</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Rapide « commandes »</strong></td>
+      <td><strong>Speech-to-Phrase</strong> (sous-seconde, entraîné sur les appareils de la maison)</td>
+      <td>Piloter la maison instantanément, sans solliciter de LLM.</td>
+    </tr>
+    <tr>
+      <td><strong>Intelligente « conversation »</strong></td>
+      <td><strong>Whisper</strong> (français, qualité <em>medium</em>)</td>
+      <td>Si la phrase commence par « Cynthia… » → routée vers l'agent Hermès ; sinon → intents
+      domotiques natifs.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>La <strong>synthèse vocale (TTS)</strong> est assurée par <strong>Piper</strong> (voix française),
+et la maison répond <strong>sur les enceintes Sonos</strong>. Quand la requête est longue à traiter
+(l'agent réfléchit), l'expérience est hybride : réponse immédiate si c'est rapide, sinon un « je m'en
+occupe » puis une livraison <strong>asynchrone</strong> de la réponse sur Sonos.</p>
+
+<h4>Pourquoi le DGX — et les références NVIDIA</h4>
+<p>Faire tourner Whisper en français <em>medium</em> et la synthèse Piper <strong>en continu</strong>
+sans saturer une machine cliente, c'est précisément le terrain du GB10 : la mémoire unifiée laisse
+cohabiter STT, TTS, vision et le LLM de l'agent, et la machine est disponible 24/7. Côté filiation,
+ce pipeline est la version « domestique et open-source » d'une chaîne que NVIDIA industrialise avec
+<strong>Riva</strong> (reconnaissance et synthèse temps réel) et <strong>NeMo</strong> (entraînement
+de modèles voix). On est resté sur Wyoming/Whisper/Piper pour la simplicité et le français intégré à
+Home Assistant — mais le DGX laisse la marge pour monter vers Riva/Parakeet/NIM si l'on veut du
+temps-réel multi-locuteurs.</p>
+
+<h3 id="visage">10.3 Reconnaissance faciale : « Bonjour &lt;Prénom&gt; »</h3>
+
+<p>Une caméra branchée au DGX alimente un <strong>service de perception</strong> qui détecte et
+reconnaît les visages. La détection utilise <strong>SCRFD</strong>, l'empreinte faciale (un vecteur
+de 512 nombres) est produite par <strong>ArcFace</strong>, et la comparaison à une petite galerie
+locale donne l'identité (ou « inconnu »). Quand un visage connu apparaît, un message est publié sur
+le bus MQTT, et Home Assistant annonce « <strong>Bonjour &lt;Prénom&gt;</strong> » sur les enceintes
+Sonos.</p>
+
+<p>Détail d'ingénierie qui compte : cette reconnaissance tourne <strong>sur le CPU</strong> (via
+ONNX Runtime), de façon volontairement décimée à quelques images par seconde. Elle n'a pas besoin du
+GPU — qu'on garde libre pour le LLM et la reconnaissance gestuelle.</p>
+
+<div class="callout warning">
+  <div class="callout-title">Donnée biométrique = donnée sensible</div>
+  <p>La reconnaissance faciale ne quitte <strong>jamais</strong> la maison : aucune image, aucune
+  empreinte n'est envoyée vers un service tiers. C'est l'illustration la plus nette de l'intérêt de
+  l'edge : ce type de traitement n'est acceptable que <strong>strictement local</strong>.</p>
+</div>
+
+<h3 id="gestes">10.4 Reconnaissance gestuelle « à la Minority Report »</h3>
+
+<p>Le même service de perception fait aussi de la <strong>reconnaissance de gestes</strong> pour
+piloter le miroir <strong>à la main, sans le toucher</strong>. Cette fois on utilise le
+<strong>GPU</strong> : un modèle de pose <strong>YOLO11n-pose</strong>, exporté en moteur
+<strong>TensorRT FP16</strong>, suit en temps réel les articulations du corps. Une heuristique
+analyse la trajectoire du poignet (normalisée par la largeur des épaules) pour reconnaître des
+gestes : balayage gauche/droite/haut/bas, deux mains levées…</p>
+
+<div class="infographic"><img src="images/infographie-perception.png" alt="Pipeline de perception du miroir : visage sur CPU, gestes sur GPU, bus MQTT"/></div>
+<p class="infographic-caption">Figure 6 — Le bon calcul au bon endroit : visage sur CPU, gestes sur GPU, tout sur un bus MQTT local.</p>
+
+<p>Les gestes sont publiés sur MQTT (<code>dgx/gesture</code>) et consommés par le module
+<code>MMM-SparkNav</code> du miroir : un balayage horizontal fait défiler l'anneau de pages, un
+balayage vers le haut affiche la page personnelle, deux mains levées ouvrent les caméras. Le tout
+donne une <strong>interaction fluide, sans contact</strong> — l'effet « Minority Report ».</p>
+
+<div class="infographic"><img src="images/gesture-mirror.png" alt="Illustration de la reconnaissance gestuelle sur le miroir connecté"/></div>
+<p class="infographic-caption">Figure 7 — Piloter le miroir d'un geste.</p>
+
+<h4>Démonstration vidéo</h4>
+<p>La vidéo ci-dessous montre l'expérience utilisateur en conditions réelles : naviguer entre les
+pages du miroir d'un simple geste de la main.</p>
+
+<div style="max-width:340px;margin:1.5rem auto;">
+  <div style="padding:177.78% 0 0 0;position:relative;"><iframe src="https://player.vimeo.com/video/1201916385?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479" frameborder="0" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" referrerpolicy="strict-origin-when-cross-origin" style="position:absolute;top:0;left:0;width:100%;height:100%;" title="Démo DGX Spark - gesture recognition sur miroir connecté"></iframe></div>
+</div>
+<script src="https://player.vimeo.com/api/player.js"></script>
+<p class="infographic-caption">Vidéo — reconnaissance gestuelle sur le miroir connecté (lecture nécessite une connexion Internet).</p>
+
+<div class="callout">
+  <div class="callout-title">Une leçon d'honnêteté terrain</div>
+  <p>La reconnaissance par pose est <strong>sensible aux conditions</strong> : il faut être à bonne
+  distance, debout, face caméra, avec des gestes amples. Et un piège structurel subsiste — lever la
+  main pour <em>amorcer</em> un geste ressemble à un vrai balayage vertical. Le retour d'expérience,
+  c'est aussi documenter ce qui n'est pas encore parfait : la voie de correction (désactiver la
+  navigation verticale par balayage tout en gardant l'auto-affichage au visage et les balayages
+  horizontaux) est identifiée pour une prochaine itération.</p>
+</div>
+
+<h3 id="hermes-miroir">10.5 Hermès × miroir : une page pilotée par l'agent</h3>
+
+<p>Le miroir et l'agent se rejoignent ici. On peut demander à <strong>Cynthia</strong> (par la voix
+ou par Telegram) de <strong>générer le contenu d'un écran du miroir</strong> : « mets la synthèse du
+matin sur l'écran Hermès ». L'agent compose une page HTML et la <strong>pousse sur le bus MQTT</strong>
+(message conservé/<em>retain</em>) vers l'écran cible.</p>
+
+<p>Le miroir rend ce HTML dans une <strong>iframe en bac à sable (« sandbox »)</strong>, avec une
+politique de sécurité de contenu (CSP) stricte : <strong>aucun script ne s'exécute, aucune ressource
+distante n'est chargée</strong>. C'est le point de sécurité crucial : on affiche du contenu généré
+par un LLM <em>sans</em> lui donner les clés du navigateur. Même un HTML malicieux y serait inerte.</p>
+
+<p>Le mécanisme est générique : d'autres écrans de l'anneau sont alimentés de la même façon par des
+générateurs déterministes (par exemple un tableau de bord de <strong>monitoring de la maison</strong>
+— appareils connectés au réseau et lumières allumées — ou des pages d'actualité), publiés
+périodiquement et rendus dans la même iframe sandbox.</p>
+
+<h3 id="pages-perso">10.6 Pages contextuelles déclenchées par le visage</h3>
+
+<p>Dernière brique, et sans doute la plus « magique » à l'usage : le miroir <strong>n'affiche la page
+personnelle d'un utilisateur que si son visage est reconnu devant lui</strong>. La reconnaissance
+faciale (§10.3) publie en continu un « battement de présence » sur MQTT ; le module de navigation s'en
+sert pour savoir <em>qui</em> est là, et bascule automatiquement sur le contenu de cette personne
+(ses mémos, ses informations), surmonté du bandeau « Bonjour &lt;Prénom&gt; ».</p>
+
+<p>On obtient une expérience contextuelle et privée : <strong>le bon contenu, pour la bonne personne,
+au bon moment</strong> — et rien n'est affiché si personne d'identifié n'est devant le miroir. C'est
+la convergence de toutes les briques : perception (qui est là), agent (quoi afficher), affichage
+(comment), le tout orchestré localement sur le DGX.</p>
+
+<h3 id="ecrans-miroir">10.7 Démo — visage, gestes &amp; écrans du miroir</h3>
+<p>Une vue d'ensemble des différents écrans/pages du miroir en action — navigation, pages
+contextuelles, contenus poussés par Hermès :</p>
+<div style="margin:1.5rem 0;">
+  <div style="padding:56.25% 0 0 0;position:relative;"><iframe src="https://player.vimeo.com/video/1202181954?h=27a3eda850&amp;badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479" frameborder="0" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" referrerpolicy="strict-origin-when-cross-origin" style="position:absolute;top:0;left:0;width:100%;height:100%;" title="Démo des écrans du miroir"></iframe></div>
+</div>
+<p class="infographic-caption">Vidéo — visage, gestes &amp; écrans du miroir (lecture nécessite une connexion Internet).</p>
+
+<h2 id="code">11. Coder en local : Claude Code, OpenCode, KiloCode, Xcode</h2>
+
+<p>Sans doute l'usage le plus frappant pour un public de développeurs. Comme Ollama expose une API
+<strong>compatible OpenAI <em>et</em> Anthropic</strong>, on branche les <strong>modèles de code
+locaux</strong> du DGX dans la quasi-totalité des outils de dev — open-source comme propriétaires —
+<strong>sans abonnement et sans envoyer une ligne de code dans le cloud</strong>. Le DGX devient un
+copilote privé, au coût marginal nul, qu'on retrouve dans tous ses éditeurs.</p>
+
+<div class="callout info">
+  <div class="callout-title">Un seul backend, branché partout</div>
+  <p>Le même Ollama (sur le DGX) alimente OpenCode, KiloCode, Claude Code et Xcode. On change d'outil,
+  pas de cerveau. Modèles utilisés ici selon la tâche : <code>qwen3-coder:30b</code>,
+  <code>qwen3.5:27b</code>, <code>qwen3.6:35b</code>.</p>
+</div>
+
+<h3 id="opencode">11.1 OpenCode — agent de code en terminal (open-source)</h3>
+<p>OpenCode se configure pour taper l'Ollama du DGX : ici le modèle <code>qwen3-coder:30b-q8</code>,
+« en local sur DGX Spark ». Rien ne sort de la machine.</p>
+<div class="infographic"><img src="images/dev-opencode.png" alt="OpenCode branché sur qwen3-coder:30b-q8 / Ollama DGX Spark"/></div>
+<p class="infographic-caption">OpenCode — modèle <code>qwen3-coder:30b-q8</code> servi en local par le DGX.</p>
+
+<h3 id="kilocode">11.2 KiloCode</h3>
+<p>Même principe pour KiloCode (agent de code) : l'endpoint pointe sur l'Ollama du DGX.</p>
+<div class="infographic"><img src="images/dev-kilocode.png" alt="KiloCode configuré sur l'Ollama du DGX"/></div>
+<p class="infographic-caption">KiloCode — les modèles locaux du DGX comme backend.</p>
+
+<h3 id="claude-code">11.3 Claude Code — au prix d'un petit hack proxy</h3>
+<p>Claude Code (2.1.x) est plus exigeant : il <strong>valide le modèle</strong> au démarrage en
+appelant un endpoint Anthropic <code>/v1/messages/count_tokens</code> qu'Ollama <strong>ne sert
+pas</strong> → sans lui, il refuse le modèle (« issue with the selected model »). La parade : un
+<strong>petit proxy local</strong> qui <em>fournit</em> cet endpoint (comptage de tokens) et
+<em>relaie</em> le reste vers Ollama. Trois options selon le goût :</p>
+
+<table>
+  <thead><tr><th>Option</th><th>Ce que c'est</th><th>Compromis</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Shim maison</strong> (~50 lignes)</td><td>répond à <code>count_tokens</code> (estimation) + relaie le reste, injecte le jeton, tué à la fermeture</td><td>ultra-léger, zéro dépendance · comptage approximatif (sans enjeu vu les fenêtres de contexte énormes)</td></tr>
+    <tr><td><strong>claude-code-router</strong></td><td>proxy Node dédié « Claude Code + backends tiers »</td><td>clé en main · une dépendance Node</td></tr>
+    <tr><td><strong>LiteLLM</strong></td><td>proxy Python complet (comptage <em>exact</em>)</td><td>robuste · plus lourd</td></tr>
+  </tbody>
+</table>
+
+<p>Un wrapper maison (<code>claude-dgx</code>) automatise tout : il lit le jeton dans le trousseau
+(Keychain), <strong>auto-détecte le meilleur chemin</strong> (Tailscale → LAN → Cloudflare), lance le
+proxy puis Claude Code, et nettoie le proxy à la sortie.</p>
+
+<div style="display:flex;flex-wrap:wrap;gap:1rem;margin:1.5rem 0;">
+  <div style="flex:1;min-width:320px;">
+    <div class="infographic"><img src="images/dev-claude-launch.png" alt="claude-dgx : sélection du modèle local"/></div>
+    <p class="infographic-caption">Lancement via <code>claude-dgx</code> — choix du modèle local.</p>
+  </div>
+  <div style="flex:1;min-width:320px;">
+    <div class="infographic"><img src="images/dev-claude-operational.png" alt="Claude Code opérationnel sur qwen3.6:35b local"/></div>
+    <p class="infographic-caption">Claude Code 2.1.179 sur <code>qwen3.6:35b</code> local — jauge de contexte alimentée par le proxy.</p>
+  </div>
+</div>
+
+<h3 id="demo-3d">11.4 Démo — un site web 3D, généré du premier coup</h3>
+<p>Pour juger la qualité : sur la consigne « fais un site web engageant avec du contenu 3D »,
+<strong>Qwen3.6:35B a produit le résultat ci-dessous au PREMIER jet</strong> (aucune retouche),
+entièrement en local sur le DGX.</p>
+<div style="margin:1.25rem 0;">
+  <div style="padding:56.25% 0 0 0;position:relative;"><iframe src="https://player.vimeo.com/video/1202132107?h=80eb2b9fd9&amp;badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479" frameborder="0" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" referrerpolicy="strict-origin-when-cross-origin" style="position:absolute;top:0;left:0;width:100%;height:100%;" title="Site web 3D généré par Qwen3.6:35B"></iframe></div>
+</div>
+<p class="infographic-caption">Premier jet de Qwen3.6:35B (local) — site web avec contenu 3D.</p>
+
+<h3 id="xcode">11.5 Xcode — Ollama comme provider natif</h3>
+<p>Même l'IDE d'Apple s'y prête : le « Coding Intelligence » de <strong>Xcode</strong> accepte des
+providers tiers — on a ajouté <strong>« Ollama DGX Spark »</strong> à côté d'OpenAI, Anthropic et d'un
+proxy LLM d'entreprise. Pour la démo, un <strong>jeu Snake entièrement développé en ~1 h</strong> (tout
+compris) avec <code>qwen3.5:27b</code>.</p>
+<div style="display:flex;flex-wrap:wrap;gap:1rem;margin:1.5rem 0;">
+  <div style="flex:1;min-width:300px;">
+    <div class="infographic"><img src="images/dev-xcode.png" alt="Xcode : Ollama DGX Spark ajouté comme provider d'intelligence"/></div>
+    <p class="infographic-caption">Xcode — « Ollama DGX Spark » comme provider de code, aux côtés d'OpenAI/Anthropic.</p>
+  </div>
+  <div style="flex:1;min-width:300px;">
+    <div class="infographic"><img src="images/dev-snake.png" alt="Jeu Snake développé avec qwen3.5:27b dans Xcode"/></div>
+    <p class="infographic-caption">Snake codé en ~1 h avec <code>qwen3.5:27b</code> (local).</p>
+  </div>
+</div>
+
+<div class="callout success">
+  <div class="callout-title">Ce que ça change</div>
+  <p>Un développeur peut travailler avec un <strong>assistant IA puissant, privé et gratuit à
+  l'usage</strong>, intégré dans ses outils habituels — code et secrets ne quittent jamais la maison.
+  Le DGX transforme l'edge domestique en <strong>plateforme de dev assisté</strong>.</p>
+</div>
+
+<h2 id="performances">12. Performances &amp; découpage des ressources</h2>
+
+<p>Une question revient toujours : « tout ça <em>en même temps</em>, sur une seule machine, ça
+tient ? ». La réponse tient à un principe — <strong>placer chaque charge là où elle coûte le moins</strong>
+— et à un budget de ressources confortable. Voici comment les briques se partagent le GPU, les cœurs
+CPU et la mémoire unifiée.</p>
+
+<div class="infographic"><img src="images/infographie-performances.png" alt="Découpage des performances et des ressources entre les solutions du DGX"/></div>
+<p class="infographic-caption">Figure 8 — Le découpage GPU / CPU / mémoire entre le LLM, la vision, la voix et les services de fond.</p>
+
+<h3 id="dgx-mon">12.1 Vu en vrai : le DGX sous charge</h3>
+<p>Pour rendre ce découpage concret, un petit moniteur maison (<code>dgx-mon</code>) affiche en temps
+réel l'usage CPU / GPU / mémoire unifiée, les modèles Ollama chargés et les conteneurs. La capture
+ci-dessous est un <strong>screenshot pris sur un iPad connecté en SSH via Tailscale</strong> (on observe
+le DGX de n'importe où) <strong>pendant une inférence intensive</strong> : génération de code via Claude
+Code avec <code>qwen3.6:35b</code> en effort « medium ».</p>
+<p>On y lit le modèle chargé (<code>qwen3.6:35b</code>, 100 % GPU, ≈ 29 Go), la mémoire unifiée à
+49/122 Gio, et surtout la <strong>consommation qui grimpe à ~72 W</strong> (contre ~14 W au repos),
+température en hausse : le GB10 travaille à plein — mais reste remarquablement <strong>sobre</strong>
+pour ce qu'il abat.</p>
+<div class="infographic"><img src="images/dev-dgxmon.png" alt="dgx-mon : le DGX sous charge d'inférence (~72 W), qwen3.6:35b chargé à 100 % GPU"/></div>
+<p class="infographic-caption">dgx-mon depuis un iPad (SSH via Tailscale) — <code>qwen3.6:35b</code> en inférence (Claude Code), <strong>~72 W</strong> vs ~14 W au repos.</p>
+
+<h3>Le raisonnement de répartition</h3>
+<ul>
+  <li><strong>GPU = LLM + gestes.</strong> Le GPU GB10 est réservé aux deux charges qui en ont
+  vraiment besoin : l'inférence du LLM (Qwen3.6:35b pour Sortify, et le modèle de l'agent Hermès) et
+  la pose temps réel (YOLO11n-pose en TensorRT). L'inférence du LLM travaille <strong>par à-coups</strong>
+  (quand on lui pose une question), ce qui laisse de la marge pour la pose qui, elle, est continue mais
+  légère.</li>
+  <li><strong>CPU = la perception continue et la voix.</strong> La <strong>reconnaissance faciale</strong>
+  est le vrai coût permanent : environ <strong>2,5 cœurs à 10 images/seconde</strong> (et près de
+  moitié moins si l'on descend à 5 i/s). Elle tourne volontairement sur CPU (ONNX Runtime, threads
+  plafonnés) pour <strong>ne pas voler le GPU</strong> au LLM. Whisper (transcription) consomme par
+  pics lors d'une phrase ; Piper (synthèse) et Speech-to-Phrase sont légers.</li>
+  <li><strong>Mémoire unifiée = le grand réservoir partagé.</strong> Le LLM occupe la plus grosse part
+  (de l'ordre de 20 à 35 Go selon le modèle et sa quantification), Whisper et les services (Home
+  Assistant, MQTT, nginx, cloudflared, agent) quelques gigaoctets, la perception une empreinte modeste
+  (la reconnaissance faciale tient dans ~350 Mo). Sur 128 Go, la marge reste confortable — et la
+  mémoire unifiée évite de dupliquer les données entre CPU et GPU.</li>
+</ul>
+
+<div class="callout">
+  <div class="callout-title">Le levier de réglage le plus utile</div>
+  <p>La cadence caméra de la reconnaissance faciale est le principal curseur de coût CPU : 10 i/s donne
+  une réactivité agréable, 5 i/s divise la charge par deux pour un confort à peine moindre. C'est le
+  genre d'arbitrage qu'on ajuste « à chaud » selon ce qui tourne en parallèle.</p>
+</div>
+
+<p>La leçon d'ensemble : ce n'est pas la puissance brute qui rend l'expérience fluide, c'est la
+<strong>discipline de placement</strong>. Un LLM 35B, de la vision sur deux processeurs différents,
+de la voix et une douzaine de services de fond cohabitent <strong>parce que chacun a été mis là où il
+gêne le moins</strong> — et parce que les 128 Go de mémoire unifiée du GB10 absorbent l'ensemble.</p>
+
+<h2 id="nemoclaw">13. Aller plus loin : le guide d'installation NemoClaw</h2>
+
+<p>Tout cet écosystème suppose d'abord une étape moins visible : <strong>installer et configurer
+la machine</strong>. J'ai documenté ce parcours — de la mise en route du DGX Spark à la stack
+<strong>NemoClaw</strong> — dans un guide dédié publié sur mon blog.</p>
+
+<div class="callout info">
+  <div class="callout-title">Bon à savoir</div>
+  <p>Cet article date de <strong>mars 2026</strong> : il n'est pas forcément à jour des dernières
+  mises à jour publiées depuis par NVIDIA, mais il donne une <strong>bonne idée de la démarche
+  d'implémentation</strong> et des choix d'installation.</p>
+</div>
+
+<p>👉 <a href="https://ohoachuck.github.io/nemoclaw-dgx-spark-guide/fr/" target="_blank" rel="noopener">Lire le guide d'installation NemoClaw sur DGX Spark</a></p>
+
+<h2 id="deerflow">14. DeerFlow : deep-research local (exploration à peine commencée)</h2>
+
+<div class="callout warning">
+  <div class="callout-title">Statut : tout début d'exploration</div>
+  <p>Contrairement aux briques précédentes (qui tournent au quotidien chez moi), <strong>DeerFlow n'en
+  est qu'à ses tout premiers pas</strong> : installé et branché, mais pas encore intégré ni vraiment
+  éprouvé. Je le mentionne comme <em>piste</em>, pas comme acquis.</p>
+</div>
+
+<p><strong>DeerFlow</strong> (open-source, par ByteDance, bâti sur LangGraph) est un framework de
+<strong>« deep research » multi-agents</strong> : on lui pose une question, il <strong>planifie</strong>
+la recherche, <strong>cherche sur le web</strong> (DuckDuckGo), <strong>lit les sources</strong> (Jina)
+et <strong>synthétise un rapport</strong> structuré — avec un bac à sable pour manipuler des fichiers.
+C'est l'équivalent open-source d'un « Deep Research ».</p>
+
+<p>Sur le DGX, il tourne en conteneurs et est <strong>branché sur le LLM local</strong> (Ollama,
+<code>nemotron-3-super</code>) : le raisonnement reste à la maison, seules les requêtes de recherche
+sortent (données publiques). L'interface est volontairement <strong>privée</strong> — accessible en
+loopback via un tunnel SSH, jamais exposée. La piste à creuser : un <strong>assistant de recherche
+approfondie personnel</strong>, dont tout le raisonnement est 100 % local. Affaire à suivre.</p>
+
+<h2 id="bilan">15. Bilan &amp; perspectives</h2>
+
+<p>Au terme de ce parcours, le DGX Spark s'est révélé être bien plus qu'un serveur de modèles : un
+<strong>socle d'« edge IA » domestique</strong> sur lequel se sont empilés, sans se gêner, un service
+de LLM, un agent autonome, un hub domotique, de la vision par ordinateur et de la synthèse vocale.</p>
+
+<h3>Ce que le DGX rend possible</h3>
+<ul>
+  <li><strong>La privacy comme fondation, pas comme option.</strong> Documents, conversations,
+  visages, son du salon : tout est traité localement. C'est le seul cadre acceptable pour des données
+  aussi intimes.</li>
+  <li><strong>La cohabitation des charges.</strong> 128 Go de mémoire unifiée + un GPU capable :
+  LLM 35B, vision GPU et CPU, voix… tournent <em>ensemble</em>, en continu.</li>
+  <li><strong>Le bon calcul au bon endroit.</strong> Visage sur CPU, gestes sur GPU, LLM sur GPU :
+  on répartit pour que chaque brique ait ce qu'il lui faut, sans famine.</li>
+  <li><strong>Zéro port ouvert.</strong> Cloudflare (public) + Tailscale (privé) couvrent tous les
+  accès distants sans jamais percer la box.</li>
+</ul>
+
+<h3>Les limites &amp; vigilances</h3>
+<ul>
+  <li><strong>Plafond de taille de modèle</strong> : la mémoire est finie ; au-delà d'une certaine
+  taille, le cloud reste pertinent.</li>
+  <li><strong>Administration à sa charge</strong> : mises à jour, sauvegardes, pièges de
+  configuration — un projet maison demande de l'entretien (et beaucoup de leçons apprises en chemin).</li>
+  <li><strong>Tiers de confiance résiduels</strong> : Cloudflare et le service de coordination
+  Tailscale restent dans la boucle de la connectivité — à arbitrer en conscience.</li>
+  <li><strong>Robustesse de la perception</strong> : la reconnaissance gestuelle dépend des
+  conditions et reste perfectible.</li>
+</ul>
+
+<h3>Et la suite</h3>
+<ul>
+  <li><strong>Voix mains libres</strong> pour Cynthia (Apple Watch ou wakeword + micro au miroir).</li>
+  <li><strong>Monter en gamme sur la voix</strong> (Riva/NIM) si l'on veut du temps-réel
+  multi-locuteurs.</li>
+  <li><strong>Affiner la reconnaissance gestuelle</strong> et enrichir le vocabulaire de gestes.</li>
+  <li><strong>Étendre les pages contextuelles</strong> et les automatisations agent × maison.</li>
+</ul>
+
+<div class="callout success">
+  <div class="callout-title">En une phrase</div>
+  <p>Le DGX Spark transforme une maison en <strong>plateforme d'IA privée et agentique</strong> :
+  assez puissante pour faire tourner les modèles, la vision et la voix en continu ; assez sobre et
+  silencieuse pour vivre dans un salon ; et assez locale pour qu'aucune donnée personnelle n'ait
+  jamais besoin d'en sortir.</p>
+</div>
+
+    </div>
+  </div>
+
+  <div class="lang-en">
+    <div class="container">
+  <div class="callout">
+    <div class="callout-title">Executive summary</div>
+    <p>A personal field report on using a NVIDIA DGX Spark (GB10) as a home AI "edge computing" foundation: serving LLMs locally (Ollama / Open WebUI), exposing an API without opening a port (Cloudflare Tunnel) and connecting to it privately (Tailscale), sorting documents with AI (Sortify, Qwen3.6:35b), coding with local models across every editor (Claude Code, OpenCode, KiloCode, Xcode), and augmenting a smart mirror that sees, hears, understands and is controlled with gestures — all without any personal data ever leaving the home.</p>
+    <p><strong>Keywords</strong>: DGX Spark --- Edge AI --- Agentic --- Local dev (Claude Code · OpenCode · Xcode) --- Home automation --- Privacy --- Ollama --- Tailscale --- Cloudflare</p>
+  </div>
+    </div>
+    <div class="container">
+<div class="infographic"><img src="images/infographie-hero-en.png" alt="Functional diagram: the DGX Spark at the center and its home uses"/></div>
+<p class="infographic-caption">At a glance — the DGX at the center, its uses (documents, LLM, dev, mirror, agent, home) and the access paths (LAN · Tailscale · Cloudflare). The details are in the sections below.</p>
+
+<h2 id="pari-en">1. The bet: a private AI datacenter at home</h2>
+
+<p>This document is a <strong>personal field report</strong>. It tells how a
+<strong>NVIDIA DGX Spark</strong> — a small AI machine sitting at home — became the
+heart of a home ecosystem: a language-model server, an autonomous agent, a home-automation
+hub, and a smart mirror that sees, listens and understands. All while staying true to a
+simple principle: <strong>personal data never leaves the house</strong>.</p>
+
+<p>The common thread is <em>edge computing</em> applied to the home. Rather than sending
+your documents, your conversations and the image of your living room to a cloud, you bring
+the computation back to where the data lives. The DGX Spark makes this bet workable: it is
+powerful enough to run models of 30 to 70 billion parameters, computer vision and speech
+synthesis <em>at the same time</em>, and frugal enough to stay on permanently in an
+apartment.</p>
+
+<div class="callout info">
+  <div class="callout-title">Who this field report is for</div>
+  <p>It aims to be readable both by enthusiasts (the architecture and the technical pitfalls are here) and
+  by a curious audience (each building block is explained by what it <em>brings</em>, not only
+  by its mechanics). It is the detailed report behind a more concise presentation prepared for the
+  <strong>"Agentic in a Box"</strong> meetup (TechUp, with NVIDIA and Orange).</p>
+</div>
+
+<h2 id="materiel-en">2. The hardware: NVIDIA DGX Spark (GB10)</h2>
+
+<p>The DGX Spark is built around the <strong>GB10 Grace Blackwell</strong> superchip (an Arm CPU
+and a Blackwell GPU on the same package) and <strong>128 GB of unified memory</strong> shared
+between the CPU and the GPU. This unified memory is the key: there is no need to copy data from a
+"CPU" space to a "GPU" space. A single pool holds the language model, the vision
+models and the agent — which coexist without stepping on each other.</p>
+
+<div class="infographic"><img src="images/infographie-gb10-en.png" alt="DGX Spark GB10 specifications and edge versus cloud comparison"/></div>
+<p class="infographic-caption">Figure 1 — The GB10 and why home edge makes sense compared to the cloud.</p>
+
+<p>In practice, for home use, three properties matter more than the raw numbers:
+the machine is <strong>compact and silent</strong>, it draws little power, and it is
+<strong>always on</strong>. It effectively becomes a <em>24/7 home AI server</em>:
+the phone and the Mac delegate the heavy lifting to it and stay light.</p>
+
+<h2 id="architecture-en">3. Overall architecture</h2>
+
+<p>Before diving into the details, here is the big picture. The DGX is at the center; around it
+revolve the exposure layers (public via Cloudflare, private via Tailscale), the uses
+(LLM, agent, home automation, perception, voice, display) and the ecosystem of devices.</p>
+
+<div class="infographic"><img src="images/infographie-architecture-en.png" alt="Overall architecture diagram of the home DGX Spark"/></div>
+<p class="infographic-caption">Figure 2 — The DGX Spark as home "edge AI": a single machine, several jobs.</p>
+
+<h2 id="llm-en">4. Serving LLMs locally</h2>
+
+<h3 id="dissociation-en">4.1 Ollama and Open WebUI: decoupling for flexibility</h3>
+
+<p>The foundation is made of two well-known building blocks: <strong>Ollama</strong> (the
+inference engine that loads models onto the GPU) and <strong>Open WebUI</strong> (the web chat
+interface). The structuring choice was to run them in <strong>two separate Docker
+containers</strong>, rather than in the "all-in-one" image that bundles them together.</p>
+
+<p>Why? For two concrete reasons:</p>
+<ul>
+  <li><strong>Decoupling updates.</strong> Ollama ships very often (new models,
+  GPU optimizations). In the bundled image, Ollama lags behind because it is only rebuilt at
+  Open WebUI's pace. Decoupled, you update one without touching the other.</li>
+  <li><strong>Exposing Ollama as an API.</strong> By isolating Ollama behind its own entry
+  point, you can give it a domain name and use it as an
+  <strong>OpenAI-compatible LLM API</strong> from any application — which is exactly what makes
+  the Sortify use case possible (§7).</li>
+</ul>
+
+<table>
+  <thead><tr><th>Container</th><th>Role</th><th>Exposure</th></tr></thead>
+  <tbody>
+    <tr><td>ollama</td><td>Inference engine (GPU access)</td><td>localhost only, behind nginx</td></tr>
+    <tr><td>open-webui</td><td>Web chat interface</td><td>localhost only, behind nginx</td></tr>
+    <tr><td>watchtower</td><td>Automatic updates of official images</td><td>—</td></tr>
+  </tbody>
+</table>
+
+<p>Around twenty models coexist on the machine (from a small, fast model for testing
+up to models of 35 to 70 billion parameters), stored on a persistent volume that
+survives container recreations. The main working model for document sorting is
+<strong>Qwen3.6:35b</strong>.</p>
+
+<h3 id="maj-en">4.2 Updating the containers: automatic where it's safe, manual where it's risky</h3>
+
+<p>The update strategy is <strong>differentiated by risk</strong>:</p>
+<ul>
+  <li><strong>Official images with a stable interface</strong> (Ollama, Open WebUI):
+  <strong>Watchtower</strong> checks every night whether a new image exists, downloads it and
+  recreates the container with the same parameters. Zero intervention.</li>
+  <li><strong>Locally built images</strong> (the Hermès agent, §9.2):
+  <strong>manual, supervised updates</strong>. Watchtower can't rebuild them, and
+  above all an autonomous agent on an upstream repo that changes dozens of times a day deserves a
+  controlled pull, not a blind one. So we set up a <em>watch</em> that notifies when
+  an update exists, and a <em>safe-apply</em> script with automatic rollback
+  if startup fails.</li>
+</ul>
+
+<div class="callout">
+  <div class="callout-title">Lesson</div>
+  <p>"Auto-update everything" is a false good idea. You automate what is stable and has no inbound
+  attack surface; you keep control over what is fragile or exposed. The right update granularity is an
+  <strong>architectural decision</strong>, not a default setting.</p>
+</div>
+
+<h2 id="cloudflare-en">5. Exposing without opening a port: Cloudflare Tunnel</h2>
+
+<p>How do you use the Ollama API or the Open WebUI interface from outside, on the move, without
+turning your Internet box into a sieve? The chosen answer: <strong>never open an inbound
+port</strong>, and route the traffic through an <strong>outbound tunnel</strong> with
+<strong>Cloudflare Tunnel</strong> (the <code>cloudflared</code> daemon).</p>
+
+<div class="infographic"><img src="images/infographie-securite-en.png" alt="Cloudflare Tunnel and Tailscale security diagrams, with no open port"/></div>
+<p class="infographic-caption">Figure 3 — Two access paths, a single rule: no inbound port forwarding on the box.</p>
+
+<p>The principle: it is <strong>the DGX that initiates the connection</strong> to the Cloudflare
+network (an outbound connection, like when a browser visits a website). Cloudflare becomes the
+public entry point (for example <code>https://ollama.example.com</code>), and sends the requests
+back down through that tunnel already opened from the inside. <strong>The Internet box has no port
+forwarding at all</strong>: seen from outside, there is simply nothing to attack.</p>
+
+<p>Why is this safe?</p>
+<ul>
+  <li><strong>Zero inbound attack surface.</strong> No open port = no service exposed to
+  scan or to brute-force from the Internet.</li>
+  <li><strong>TLS and filtering upstream.</strong> Encryption and a first anti-abuse barrier
+  are handled by the Cloudflare network, before they even reach the house.</li>
+  <li><strong>Application-level authentication.</strong> Behind the tunnel, a local
+  <strong>nginx</strong> enforces a <strong>Bearer token</strong> on the Ollama API. The secrets
+  live on the server side, in restricted mode, never in the code or in the documentation.
+  <em>Only the Ollama API is exposed publicly</em>: the Open WebUI interface itself is no longer
+  reachable from the Internet (see §8).</li>
+</ul>
+
+<div class="callout warning">
+  <div class="callout-title">The flip side — a privacy point worth understanding</div>
+  <p>Cloudflare Tunnel is a <strong>reverse proxy that terminates TLS at its edge</strong>: it is
+  Cloudflare that presents the certificate for <code>ollama.example.com</code>, so it
+  <strong>decrypts</strong> the request on the way in, then re-encrypts it toward the DGX. In other
+  words, at the Cloudflare hop, the content is <strong>in the clear</strong> — including the
+  <em>prompts</em> and, where applicable, the content of documents sent to the API. <strong>This is
+  not end-to-end encryption.</strong> You therefore shift part of the trust onto a third party,
+  just like with any CDN.</p>
+  <p>Three important clarifications to put this in perspective — and to arbitrate well:</p>
+  <ul>
+    <li><strong>This concerns ONLY the traffic that goes out through the public domain.</strong> At
+    home (LAN) or via Tailscale, the applications — including Sortify — call the DGX
+    <strong>directly</strong>: Cloudflare is then not in the path at all.</li>
+    <li><strong>It's a trust model, not a vulnerability.</strong> You rely on Cloudflare's policy
+    (not to inspect or retain the proxied content), exactly as you trust a CDN or a hosting
+    provider. Acceptable for everyday uses, debatable for very sensitive data.</li>
+    <li><strong>For zero third party in the path, prefer Tailscale (§6).</strong> By reaching
+    the Ollama API <em>via the tailnet</em> rather than via the public domain, the link is encrypted
+    end-to-end (WireGuard) and Cloudflare drops out of the loop. You then reserve Cloudflare for
+    genuinely public, non-confidential sharing.</li>
+  </ul>
+  <p>This is also why, for <em>administrative access</em> (SSH, VNC), we never go through
+  a public service: Tailscale only.</p>
+</div>
+
+<h2 id="tailscale-en">6. Private access: Tailscale, a network between my devices</h2>
+
+<p>To administer the DGX (and the Mac) from the iPhone or iPad <em>from anywhere</em> — opening
+an SSH session, taking control over VNC on the screen — we use <strong>Tailscale</strong>. It's a
+<strong>mesh VPN</strong> built on the <strong>WireGuard</strong> protocol: all my devices
+(iPhone, iPad, Mac, DGX) join a single <strong>encrypted private network</strong> (a "tailnet"),
+and talk to each other directly, as if they were on the same LAN — wherever they are
+physically.</p>
+
+<p>As with Cloudflare, the key point is that <strong>no port is opened on the box</strong>:
+each device establishes an outbound connection to the coordination service, then the peers
+communicate directly through an end-to-end encrypted WireGuard tunnel. Each node receives a
+stable address (in the <code>100.x</code> range) that is never routed over the public Internet.</p>
+
+<h3>What level of trust — and what to watch out for?</h3>
+
+<p>The model is called <strong>"zero-trust"</strong>: you don't trust the network (a hotel's
+Wi-Fi, 5G), but the <strong>authenticated identity of each device</strong>. It's solid,
+provided you know the points to watch:</p>
+
+<table>
+  <thead><tr><th>What protects you</th><th>What to stay vigilant about</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>WireGuard encryption (reputed robust), end-to-end.</td>
+      <td>The <strong>SSO account</strong> that drives the tailnet becomes "the key to the kingdom" →
+      <strong>multi-factor authentication is mandatory</strong> on that account.</td>
+    </tr>
+    <tr>
+      <td>Per-device identity: an unauthorized device doesn't get in.</td>
+      <td>The <strong>coordination server</strong> (Tailscale) is a <strong>trusted third
+      party</strong>: it orchestrates the keys (but does not see the content of the traffic).</td>
+    </tr>
+    <tr>
+      <td>Hardened SSH on top: <strong>key-based login only</strong>, password
+      refused, user allowlist.</td>
+      <td><strong>Disable key expiry</strong> on key nodes (otherwise you lose remote access
+      at the worst possible moment); <strong>immediately revoke</strong> a lost device.</td>
+    </tr>
+    <tr>
+      <td>No public surface: nothing to scan from the Internet.</td>
+      <td>Keep the <strong>access rules (ACLs) as tight as possible</strong>: a device should
+      reach only what it needs.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Where exactly to place trust: data plane vs control plane</h3>
+
+<p>To properly assess the solution, you have to separate <strong>two planes</strong> — and you don't
+grant them the same level of trust:</p>
+
+<ul>
+  <li><strong>The data plane (your traffic) — you do NOT trust Tailscale here.</strong>
+  The encryption is <strong>WireGuard end-to-end</strong> and the <strong>private keys never
+  leave your devices</strong>: Tailscale cannot decrypt your traffic. Even when the direct
+  peer-to-peer connection fails and the flow goes through a Tailscale <strong>DERP relay</strong>,
+  that relay only sees opaque <strong>encrypted packets</strong>. Confidentiality therefore
+  does not depend on trusting Tailscale — this is the major strength.</li>
+  <li><strong>The control plane (the coordination server) — that's where the residual trust
+  lies.</strong> It doesn't see the content, but it <strong>distributes the public keys and the
+  ACLs</strong> and relies on your identity provider (SSO). The theoretical risk: a compromised
+  coordination server could <strong>inject a rogue node</strong> into the tailnet
+  (key substitution). It is also an <strong>availability</strong> point (if it goes down,
+  existing links hold, but adding/renewing nodes no longer works).</li>
+</ul>
+
+<p>Good news: this residual trust can be <strong>reduced, or even eliminated</strong>:</p>
+<ul>
+  <li><strong>Tailnet Lock</strong> (native feature): new nodes must be
+  <strong>signed by your own trusted devices</strong> — even Tailscale can then no longer
+  add a device without your signature. It's the direct countermeasure to node injection.</li>
+  <li><strong>Headscale</strong>: an <strong>open-source reimplementation of the control plane</strong>,
+  self-hostable, which takes Tailscale Inc. completely out of the loop (at the cost of operating it).</li>
+  <li>At the extreme, <strong>bare WireGuard</strong>: no coordination server, but keys and
+  NAT traversal to manage yourself.</li>
+</ul>
+
+<div class="callout info">
+  <div class="callout-title">The trust verdict</div>
+  <p><strong>Strong trust by default</strong>: end-to-end encryption, local keys, an
+  <strong>open-source</strong> client, audited WireGuard, a vendor with a good security track record. The
+  <strong>number one practical risk remains your SSO account</strong> (its compromise = access to the tailnet) →
+  MFA is non-negotiable. And if you want "zero trust in the third party", you enable
+  <strong>Tailnet Lock</strong> (quick) or move to <strong>Headscale</strong> (radical).</p>
+</div>
+
+<div class="callout info">
+  <div class="callout-title">Cloudflare and Tailscale, two complementary tools</div>
+  <p><strong>Cloudflare Tunnel</strong> is for exposing <em>public services</em> (an API, a UI)
+  to third parties, with authentication. <strong>Tailscale</strong> is for giving yourself
+  <em>private administrative access</em> to your own machines. Both share the same golden rule: you
+  never punch a hole in the box. Together, they cover public exposure <em>and</em> private access
+  without any inbound port.</p>
+</div>
+
+<h2 id="sortify-en">7. "Sortify" use case: AI-powered document sorting</h2>
+
+<p><strong>Sortify</strong> is an app (Mac, iPhone, iPad) that tackles a universal chore:
+paperwork. Every document that arrives — an email attachment, a scan from the printer,
+a file dropped in an "inbox" folder, a photo taken on the phone — is captured, <strong>analyzed by
+AI</strong>, then automatically <strong>indexed and filed</strong>. You scan and forget: the AI
+classifies and retrieves on your behalf.</p>
+
+<div class="infographic"><img src="images/infographie-sortify-en.png" alt="Sortify document processing flow via the DGX"/></div>
+<p class="infographic-caption">Figure 4 — From source to filing: the client captures, the DGX understands.</p>
+
+<p>The central point is <strong>where</strong> the analysis happens. Documents are processed by the
+<strong>Qwen3.6:35b model hosted on Ollama, on the DGX Spark</strong>. The client app stays
+light: it captures, queues, and delegates the bulk of the work to the always-on
+machine. The result: you can <strong>scan a document from your phone without worrying about
+latency or memory</strong> — and it's the same on the Mac.</p>
+
+<div style="display:flex;flex-wrap:wrap;gap:1rem;margin:1.5rem 0;">
+  <div style="flex:1;min-width:320px;">
+    <div class="infographic"><img src="images/sortify-mac-analysed.png" alt="Sortify on Mac: document analyzed and filed"/></div>
+    <p class="infographic-caption">Sortify on Mac — a document analyzed, summarized and categorized.</p>
+  </div>
+  <div style="flex:1;min-width:320px;">
+    <div class="infographic"><img src="images/sortify-mac-chat.png" alt="Sortify on Mac: chatting with a document"/></div>
+    <p class="infographic-caption">Sortify on Mac — "chat with the document": ask a question about its content.</p>
+  </div>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:1.5rem;justify-content:center;margin:1.5rem 0;">
+  <div style="max-width:300px;">
+    <div class="infographic"><img src="images/sortify-iphone-analysed.png" alt="Sortify on iPhone: document analyzed"/></div>
+    <p class="infographic-caption">On iPhone — analyzing a document scanned on the move.</p>
+  </div>
+  <div style="max-width:300px;">
+    <div class="infographic"><img src="images/sortify-iphone-chat.png" alt="Sortify on iPhone: chatting with a document"/></div>
+    <p class="infographic-caption">On iPhone — questions/answers about a document; the computation happens on the DGX.</p>
+  </div>
+</div>
+
+<p>What the DGX changes, in three points:</p>
+<ul>
+  <li><strong>A 35B model at home</strong>: unthinkable to run on an iPhone or a Mac
+  without overheating it or draining the battery. Model size unlocks the quality of the analysis.</li>
+  <li><strong>Privacy</strong>: invoices, contracts, official letters… are
+  <strong>analyzed on the DGX</strong>, never on a third-party AI service. At home (LAN) or via
+  Tailscale, the content does not leave the home network. For remote access through the public
+  domain, the traffic transits through Cloudflare (see the caveat in §5) — hence the value of
+  preferring Tailscale for the most sensitive documents.</li>
+  <li><strong>Zero marginal cost</strong>: you process thousands of documents with no per-token
+  billing.</li>
+</ul>
+
+<h2 id="openwebui-en">8. Personal Open WebUI: a private ChatGPT-like, reachable via Tailscale</h2>
+
+<p>The <strong>Open WebUI</strong> interface offers a <strong>private "ChatGPT-like"</strong>:
+the same uses as a consumer assistant — rewording a sensitive letter, analyzing a confidential
+document, preparing an administrative procedure — but <strong>the conversation and the attachments
+stay on the DGX</strong>, never on a third-party service. It's the ideal tool for everyday
+tasks that touch <strong>personal data</strong>.</p>
+
+<h3>Why we removed it from public access</h3>
+<p>Open WebUI was first exposed like the API (§5), behind the Cloudflare tunnel with
+<strong>basic authentication</strong> (HTTP Basic Auth) at the nginx level. On reflection,
+that's too weak a link for an interface giving access to personal data:</p>
+<ul>
+  <li>Basic Auth has <strong>no rate limiting, no account lockout, no MFA</strong>
+  → it is exposed to <strong>online brute-forcing</strong> and <em>credential stuffing</em>;</li>
+  <li>the credentials are sent back <strong>on every request</strong> (their only protection in
+  transit is TLS);</li>
+  <li>security then comes down to the strength of a single password.</li>
+</ul>
+
+<p>Rather than hardening a public entry point (adding rate limiting, or even an identity
+portal in front), we made the simplest and safest choice: <strong>plainly and simply
+removing the public exposure</strong> of Open WebUI. It is now reachable
+<strong>only via Tailscale</strong> (and on the local network). You reach the interface through the
+DGX's private address on the tailnet — the link is encrypted end-to-end (WireGuard), and there is
+<strong>nothing left to brute-force from the Internet</strong>. On top of that, Open WebUI keeps its own
+application-level authentication (accounts/login).</p>
+
+<div class="callout success">
+  <div class="callout-title">The right answer to a weak link: remove it, don't patch it</div>
+  <p>When a protection is structurally weak (here Basic Auth), putting it behind an
+  authenticated private network (Tailscale) is often more robust — and simpler — than stacking
+  band-aids on a public endpoint. You reserve public exposure (Cloudflare) for what really
+  needs it: the Ollama API, protected by a token.</p>
+</div>
+
+<h2 id="maison-en">9. The home: Home Assistant &amp; Hermès</h2>
+
+<h3 id="home-assistant-en">9.1 Home Assistant, the local home-automation hub</h3>
+
+<p><strong>Home Assistant</strong> runs in a container on the DGX and plays the role of a
+<strong>local-first (zero-cloud) home-automation hub</strong>. It aggregates the home's equipment and gives them
+a common language:</p>
+<ul>
+  <li>the <strong>Fibaro</strong> home-automation box (Z-Wave master) stays in place; Home Assistant
+  overlays it and exposes all the devices as entities;</li>
+  <li>the <strong>Sonos</strong> speakers (auto-discovered) become controllable audio
+  outputs — they are how the home "speaks";</li>
+  <li>an <strong>MQTT message bus</strong> (a local Mosquitto broker) acts as the nervous system:
+  this is where perception (faces, gestures, presence) publishes its events, and where the other
+  building blocks subscribe.</li>
+</ul>
+
+<p>Everything stays on the local network. The hub that drives the home is <strong>not</strong> exposed
+on the Internet: you reach it on the LAN or via Tailscale, never via a public service.</p>
+
+<h3 id="hermes-en">9.2 Hermès, the autonomous agent ("Cynthia")</h3>
+
+<p><strong>Hermès</strong> is an autonomous agent (an open-source project by Nous Research) that runs
+in a container on the DGX, <strong>connected to the local LLM</strong> served by Ollama. It's the "brain"
+that can reason, chain tools and act. We personified it under the name
+<strong>Cynthia</strong>.</p>
+
+<p>Today, we talk to it in two ways:</p>
+<ul>
+  <li><strong>Telegram</strong>: a private bot (with a user allowlist) lets you
+  write to it from anywhere — "give me a weather + calendar + birthdays summary this morning",
+  "put this info on the mirror screen"… The agent has <em>skills</em> (sending email,
+  reading/writing the calendar, etc.) and an internal task scheduler.</li>
+  <li><strong>Home Assistant</strong>: Hermès is integrated into the hub, which lets it act on the
+  home (announcements, devices) and be triggered by it.</li>
+</ul>
+
+<div class="callout info">
+  <div class="callout-title">The next step: "hands-free" voice</div>
+  <p>For now, the interaction is via the keyboard (Telegram) or via the mirror's voice pipeline
+  (§10.2). The goal is a <strong>dedicated audio capture</strong> — either via the <strong>Apple
+  Watch</strong> (a wrist trigger), or via a <strong>wakeword and a
+  microphone at the mirror</strong> — to talk to Cynthia without touching anything.</p>
+</div>
+
+<p>A notable security point: the agent is exposed on <strong>no inbound port</strong>. On the
+Telegram side, it's the agent that <em>reaches out</em> to poll the servers (polling); its dashboard, which
+stores keys, is bound to <code>127.0.0.1</code> and reachable only via an SSH tunnel. Here again,
+nothing is open to the outside.</p>
+
+<h2 id="miroir-en">10. The augmented smart mirror</h2>
+
+<p>This is the showcase of the project: a <strong>smart mirror</strong> (a screen behind a two-way
+mirror) that displays the time, the weather, the calendar… but above all that <strong>sees, listens, understands and
+reacts</strong>. All the intelligence is hosted on the DGX.</p>
+
+<h3 id="magicmirror-en">10.1 MagicMirror² hosted on the DGX</h3>
+
+<p>The display relies on <strong>MagicMirror²</strong> (an open-source Electron app) that
+runs in kiosk mode on the HDMI screen connected to the DGX, with automatic login at startup. We
+added third-party modules (calendar, weather, memos, stocks, Fibaro home automation…) and above all a
+<strong>home-made, audited module</strong>: <code>MMM-SparkNav</code>, which manages a set
+of <strong>pages</strong> and the <strong>navigation</strong>.</p>
+
+<div class="callout">
+  <div class="callout-title">Design choice: no unaudited third-party code</div>
+  <p>For the sensitive building blocks (navigation, pages pushed by the agent), we wrote home-made
+  modules rather than installing unverified extensions. On a machine that sees the living room and
+  handles personal data, <strong>trust in the code that runs is a security
+  requirement</strong>.</p>
+</div>
+
+<h3 id="voix-en">10.2 Local voice: speech recognition and synthesis (STT / TTS)</h3>
+
+<p>The voice relies on Home Assistant's "Assist" pipeline, powered by <strong>Wyoming</strong>
+containers that run on the DGX. The architecture distinguishes <strong>two paths</strong>
+depending on the intent:</p>
+
+<div class="infographic"><img src="images/infographie-voix-en.png" alt="Local STT/TTS voice pipeline and NVIDIA references"/></div>
+<p class="infographic-caption">Figure 5 — Two voice paths: fast for home automation, smart for the agent.</p>
+
+<table>
+  <thead><tr><th>Path</th><th>Recognition (STT)</th><th>Use</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Fast "commands"</strong></td>
+      <td><strong>Speech-to-Phrase</strong> (sub-second, trained on the home's devices)</td>
+      <td>Drive the home instantly, without calling on an LLM.</td>
+    </tr>
+    <tr>
+      <td><strong>Smart "conversation"</strong></td>
+      <td><strong>Whisper</strong> (French, <em>medium</em> quality)</td>
+      <td>If the sentence starts with "Cynthia…" → routed to the Hermès agent; otherwise → native
+      home-automation intents.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The <strong>speech synthesis (TTS)</strong> is handled by <strong>Piper</strong> (French voice),
+and the home responds <strong>on the Sonos speakers</strong>. When the request takes a long time to
+process (the agent is thinking), the experience is hybrid: an immediate response if it's fast, otherwise a "on
+it" followed by an <strong>asynchronous</strong> delivery of the answer on Sonos.</p>
+
+<h4>Why the DGX — and the NVIDIA lineage</h4>
+<p>Running Whisper in French <em>medium</em> and Piper synthesis <strong>continuously</strong>
+without saturating a client machine is precisely the GB10's home turf: the unified memory lets
+STT, TTS, vision and the agent's LLM coexist, and the machine is available 24/7. As for the lineage,
+this pipeline is the "home, open-source" version of a chain that NVIDIA industrializes with
+<strong>Riva</strong> (real-time recognition and synthesis) and <strong>NeMo</strong> (training
+of voice models). We stayed on Wyoming/Whisper/Piper for simplicity and the French built into
+Home Assistant — but the DGX leaves the headroom to move up to Riva/Parakeet/NIM if you want
+real-time multi-speaker.</p>
+
+<h3 id="visage-en">10.3 Facial recognition: "Hello &lt;First name&gt;"</h3>
+
+<p>A camera connected to the DGX feeds a <strong>perception service</strong> that detects and
+recognizes faces. Detection uses <strong>SCRFD</strong>, the facial fingerprint (a vector
+of 512 numbers) is produced by <strong>ArcFace</strong>, and comparison against a small local
+gallery gives the identity (or "unknown"). When a known face appears, a message is published on
+the MQTT bus, and Home Assistant announces "<strong>Hello &lt;First name&gt;</strong>" on the Sonos
+speakers.</p>
+
+<p>An engineering detail that matters: this recognition runs <strong>on the CPU</strong> (via
+ONNX Runtime), deliberately throttled to a few frames per second. It doesn't need the
+GPU — which we keep free for the LLM and gesture recognition.</p>
+
+<div class="callout warning">
+  <div class="callout-title">Biometric data = sensitive data</div>
+  <p>Facial recognition <strong>never</strong> leaves the house: no image, no
+  fingerprint is sent to a third-party service. It's the clearest illustration of the value of
+  the edge: this kind of processing is only acceptable <strong>strictly local</strong>.</p>
+</div>
+
+<h3 id="gestes-en">10.4 "Minority Report"-style gesture recognition</h3>
+
+<p>The same perception service also does <strong>gesture recognition</strong> to
+drive the mirror <strong>by hand, without touching it</strong>. This time we use the
+<strong>GPU</strong>: a <strong>YOLO11n-pose</strong> pose model, exported to a
+<strong>TensorRT FP16</strong> engine, tracks the body's joints in real time. A heuristic
+analyzes the wrist's trajectory (normalized by shoulder width) to recognize
+gestures: swipe left/right/up/down, two raised hands…</p>
+
+<div class="infographic"><img src="images/infographie-perception-en.png" alt="Mirror perception pipeline: face on CPU, gestures on GPU, MQTT bus"/></div>
+<p class="infographic-caption">Figure 6 — The right computation in the right place: face on CPU, gestures on GPU, all on a local MQTT bus.</p>
+
+<p>The gestures are published on MQTT (<code>dgx/gesture</code>) and consumed by the
+<code>MMM-SparkNav</code> module of the mirror: a horizontal swipe scrolls through the ring of pages, a
+swipe up shows the personal page, two raised hands open the cameras. The whole thing
+gives a <strong>fluid, contactless interaction</strong> — the "Minority Report" effect.</p>
+
+<div class="infographic"><img src="images/gesture-mirror.png" alt="Illustration of gesture recognition on the smart mirror"/></div>
+<p class="infographic-caption">Figure 7 — Driving the mirror with a gesture.</p>
+
+<h4>Video demonstration</h4>
+<p>The video below shows the user experience in real conditions: navigating between the
+mirror's pages with a simple hand gesture.</p>
+
+<div style="max-width:340px;margin:1.5rem auto;">
+  <div style="padding:177.78% 0 0 0;position:relative;"><iframe src="https://player.vimeo.com/video/1201916385?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479" frameborder="0" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" referrerpolicy="strict-origin-when-cross-origin" style="position:absolute;top:0;left:0;width:100%;height:100%;" title="DGX Spark demo - gesture recognition on smart mirror"></iframe></div>
+</div>
+<script src="https://player.vimeo.com/api/player.js"></script>
+<p class="infographic-caption">Video — gesture recognition on the smart mirror (playback requires an Internet connection).</p>
+
+<div class="callout">
+  <div class="callout-title">A lesson in field honesty</div>
+  <p>Pose-based recognition is <strong>sensitive to conditions</strong>: you need to be at the right
+  distance, standing, facing the camera, with broad gestures. And a structural pitfall remains — raising your
+  hand to <em>initiate</em> a gesture looks like a real vertical swipe. The field report
+  also means documenting what is not yet perfect: the fix path (disabling vertical
+  swipe navigation while keeping the face auto-display and the horizontal
+  swipes) is identified for a future iteration.</p>
+</div>
+
+<h3 id="hermes-miroir-en">10.5 Hermès × mirror: a page driven by the agent</h3>
+
+<p>The mirror and the agent come together here. You can ask <strong>Cynthia</strong> (by voice
+or by Telegram) to <strong>generate the content of one of the mirror's screens</strong>: "put the morning
+summary on the Hermès screen". The agent composes an HTML page and <strong>pushes it onto the MQTT bus</strong>
+(a retained message) toward the target screen.</p>
+
+<p>The mirror renders this HTML in a <strong>sandboxed iframe</strong>, with a strict
+content security policy (CSP): <strong>no script runs, no remote resource
+is loaded</strong>. That's the crucial security point: you display content generated
+by an LLM <em>without</em> giving it the keys to the browser. Even malicious HTML would be inert there.</p>
+
+<p>The mechanism is generic: other screens in the ring are fed the same way by
+deterministic generators (for example a <strong>home monitoring</strong> dashboard
+— devices connected to the network and lights that are on — or news pages), published
+periodically and rendered in the same sandboxed iframe.</p>
+
+<h3 id="pages-perso-en">10.6 Contextual pages triggered by the face</h3>
+
+<p>The last building block, and probably the most "magical" in use: the mirror <strong>only displays a
+user's personal page if their face is recognized in front of it</strong>. Facial
+recognition (§10.3) continuously publishes a "presence heartbeat" on MQTT; the navigation module uses
+it to know <em>who</em> is there, and automatically switches to that person's content
+(their memos, their information), topped by the "Hello &lt;First name&gt;" banner.</p>
+
+<p>The result is a contextual and private experience: <strong>the right content, for the right person,
+at the right time</strong> — and nothing is displayed if no identified person is in front of the mirror. It's
+the convergence of all the building blocks: perception (who is there), agent (what to display), display
+(how), all orchestrated locally on the DGX.</p>
+
+<h3 id="ecrans-miroir-en">10.7 Demo — face, gestures &amp; mirror screens</h3>
+<p>An overview of the different mirror screens/pages in action — navigation, contextual
+pages, content pushed by Hermès:</p>
+<div style="margin:1.5rem 0;">
+  <div style="padding:56.25% 0 0 0;position:relative;"><iframe src="https://player.vimeo.com/video/1202181954?h=27a3eda850&amp;badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479" frameborder="0" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" referrerpolicy="strict-origin-when-cross-origin" style="position:absolute;top:0;left:0;width:100%;height:100%;" title="Demo of the mirror screens"></iframe></div>
+</div>
+<p class="infographic-caption">Video — face, gestures &amp; mirror screens (playback requires an Internet connection).</p>
+
+<h2 id="code-en">11. Coding locally: Claude Code, OpenCode, KiloCode, Xcode</h2>
+
+<p>Probably the most striking use for a developer audience. Since Ollama exposes an API
+<strong>compatible with OpenAI <em>and</em> Anthropic</strong>, you plug the DGX's <strong>local code
+models</strong> into nearly all dev tools — open-source as well as proprietary —
+<strong>with no subscription and without sending a single line of code to the cloud</strong>. The
+DGX becomes a private copilot, at zero marginal cost, available in all your editors.</p>
+
+<div class="callout info">
+  <div class="callout-title">A single backend, plugged in everywhere</div>
+  <p>The same Ollama (on the DGX) powers OpenCode, KiloCode, Claude Code and Xcode. You change tools,
+  not brains. Models used here depending on the task: <code>qwen3-coder:30b</code>,
+  <code>qwen3.5:27b</code>, <code>qwen3.6:35b</code>.</p>
+</div>
+
+<h3 id="opencode-en">11.1 OpenCode — terminal code agent (open-source)</h3>
+<p>OpenCode is configured to hit the DGX's Ollama: here the model <code>qwen3-coder:30b-q8</code>,
+"local on DGX Spark". Nothing leaves the machine.</p>
+<div class="infographic"><img src="images/dev-opencode.png" alt="OpenCode connected to qwen3-coder:30b-q8 / Ollama DGX Spark"/></div>
+<p class="infographic-caption">OpenCode — the <code>qwen3-coder:30b-q8</code> model served locally by the DGX.</p>
+
+<h3 id="kilocode-en">11.2 KiloCode</h3>
+<p>Same principle for KiloCode (code agent): the endpoint points to the DGX's Ollama.</p>
+<div class="infographic"><img src="images/dev-kilocode.png" alt="KiloCode configured on the DGX's Ollama"/></div>
+<p class="infographic-caption">KiloCode — the DGX's local models as the backend.</p>
+
+<h3 id="claude-code-en">11.3 Claude Code — at the price of a small proxy hack</h3>
+<p>Claude Code (2.1.x) is more demanding: it <strong>validates the model</strong> at startup by
+calling an Anthropic endpoint <code>/v1/messages/count_tokens</code> that Ollama <strong>does not
+serve</strong> → without it, it refuses the model ("issue with the selected model"). The
+workaround: a <strong>small local proxy</strong> that <em>provides</em> this endpoint (token counting) and
+<em>relays</em> the rest to Ollama. Three options depending on taste:</p>
+
+<table>
+  <thead><tr><th>Option</th><th>What it is</th><th>Trade-off</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Home-made shim</strong> (~50 lines)</td><td>answers <code>count_tokens</code> (estimation) + relays the rest, injects the token, killed on exit</td><td>ultra-light, zero dependency · approximate counting (no stakes given the huge context windows)</td></tr>
+    <tr><td><strong>claude-code-router</strong></td><td>dedicated Node proxy "Claude Code + third-party backends"</td><td>turnkey · one Node dependency</td></tr>
+    <tr><td><strong>LiteLLM</strong></td><td>full Python proxy (<em>exact</em> counting)</td><td>robust · heavier</td></tr>
+  </tbody>
+</table>
+
+<p>A home-made wrapper (<code>claude-dgx</code>) automates everything: it reads the token from the keychain
+(Keychain), <strong>auto-detects the best path</strong> (Tailscale → LAN → Cloudflare), launches the
+proxy then Claude Code, and cleans up the proxy on exit.</p>
+
+<div style="display:flex;flex-wrap:wrap;gap:1rem;margin:1.5rem 0;">
+  <div style="flex:1;min-width:320px;">
+    <div class="infographic"><img src="images/dev-claude-launch.png" alt="claude-dgx: selecting the local model"/></div>
+    <p class="infographic-caption">Launching via <code>claude-dgx</code> — choosing the local model.</p>
+  </div>
+  <div style="flex:1;min-width:320px;">
+    <div class="infographic"><img src="images/dev-claude-operational.png" alt="Claude Code operational on local qwen3.6:35b"/></div>
+    <p class="infographic-caption">Claude Code 2.1.179 on local <code>qwen3.6:35b</code> — context gauge fed by the proxy.</p>
+  </div>
+</div>
+
+<h3 id="demo-3d-en">11.4 Demo — a 3D website, generated on the first try</h3>
+<p>To judge the quality: on the prompt "make an engaging website with 3D content",
+<strong>Qwen3.6:35B produced the result below on the FIRST attempt</strong> (no edits),
+entirely locally on the DGX.</p>
+<div style="margin:1.25rem 0;">
+  <div style="padding:56.25% 0 0 0;position:relative;"><iframe src="https://player.vimeo.com/video/1202132107?h=80eb2b9fd9&amp;badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479" frameborder="0" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" referrerpolicy="strict-origin-when-cross-origin" style="position:absolute;top:0;left:0;width:100%;height:100%;" title="3D website generated by Qwen3.6:35B"></iframe></div>
+</div>
+<p class="infographic-caption">First attempt by Qwen3.6:35B (local) — a website with 3D content.</p>
+
+<h3 id="xcode-en">11.5 Xcode — Ollama as a native provider</h3>
+<p>Even Apple's IDE lends itself to it: Xcode's "Coding Intelligence" accepts third-party
+providers — we added <strong>"Ollama DGX Spark"</strong> alongside OpenAI, Anthropic and
+a corporate LLM proxy. For the demo, a <strong>Snake game built entirely in ~1 h</strong> (all
+in) with <code>qwen3.5:27b</code>.</p>
+<div style="display:flex;flex-wrap:wrap;gap:1rem;margin:1.5rem 0;">
+  <div style="flex:1;min-width:300px;">
+    <div class="infographic"><img src="images/dev-xcode.png" alt="Xcode: Ollama DGX Spark added as an intelligence provider"/></div>
+    <p class="infographic-caption">Xcode — "Ollama DGX Spark" as a code provider, alongside OpenAI/Anthropic.</p>
+  </div>
+  <div style="flex:1;min-width:300px;">
+    <div class="infographic"><img src="images/dev-snake.png" alt="Snake game built with qwen3.5:27b in Xcode"/></div>
+    <p class="infographic-caption">Snake coded in ~1 h with <code>qwen3.5:27b</code> (local).</p>
+  </div>
+</div>
+
+<div class="callout success">
+  <div class="callout-title">What it changes</div>
+  <p>A developer can work with a <strong>powerful, private and free-to-use AI
+  assistant</strong>, integrated into their usual tools — code and secrets never leave the house.
+  The DGX turns the home edge into an <strong>assisted-dev platform</strong>.</p>
+</div>
+
+<h2 id="performances-en">12. Performance &amp; resource allocation</h2>
+
+<p>One question always comes up: "all of that <em>at the same time</em>, on a single machine, does it
+hold up?". The answer rests on a principle — <strong>placing each workload where it costs the least</strong>
+— and on a comfortable resource budget. Here is how the building blocks share the GPU, the CPU
+cores and the unified memory.</p>
+
+<div class="infographic"><img src="images/infographie-performances-en.png" alt="Breakdown of performance and resources across the DGX's solutions"/></div>
+<p class="infographic-caption">Figure 8 — The GPU / CPU / memory split between the LLM, vision, voice and background services.</p>
+
+<h3 id="dgx-mon-en">12.1 Seen for real: the DGX under load</h3>
+<p>To make this split concrete, a small home-made monitor (<code>dgx-mon</code>) displays in real
+time the CPU / GPU / unified-memory usage, the loaded Ollama models and the containers. The capture
+below is a <strong>screenshot taken on an iPad connected over SSH via Tailscale</strong> (you watch
+the DGX from anywhere) <strong>during an intensive inference</strong>: code generation via Claude
+Code with <code>qwen3.6:35b</code> in "medium" effort.</p>
+<p>You can read the loaded model (<code>qwen3.6:35b</code>, 100% GPU, ≈ 29 GB), the unified memory at
+49/122 GiB, and above all the <strong>power consumption climbing to ~72 W</strong> (versus ~14 W at idle),
+temperature rising: the GB10 is working flat out — but stays remarkably <strong>frugal</strong>
+for what it crunches through.</p>
+<div class="infographic"><img src="images/dev-dgxmon.png" alt="dgx-mon: the DGX under inference load (~72 W), qwen3.6:35b loaded at 100% GPU"/></div>
+<p class="infographic-caption">dgx-mon from an iPad (SSH via Tailscale) — <code>qwen3.6:35b</code> in inference (Claude Code), <strong>~72 W</strong> vs ~14 W at idle.</p>
+
+<h3>The allocation reasoning</h3>
+<ul>
+  <li><strong>GPU = LLM + gestures.</strong> The GB10 GPU is reserved for the two workloads that
+  really need it: LLM inference (Qwen3.6:35b for Sortify, and the Hermès agent's model) and
+  real-time pose (YOLO11n-pose in TensorRT). LLM inference works <strong>in bursts</strong>
+  (when you ask it a question), which leaves headroom for pose, which is continuous but
+  light.</li>
+  <li><strong>CPU = continuous perception and voice.</strong> <strong>Facial recognition</strong>
+  is the real permanent cost: roughly <strong>2.5 cores at 10 frames/second</strong> (and nearly
+  half that if you drop to 5 fps). It runs deliberately on CPU (ONNX Runtime, capped
+  threads) so as <strong>not to steal the GPU</strong> from the LLM. Whisper (transcription) consumes in
+  bursts during a sentence; Piper (synthesis) and Speech-to-Phrase are light.</li>
+  <li><strong>Unified memory = the big shared pool.</strong> The LLM takes the biggest share
+  (on the order of 20 to 35 GB depending on the model and its quantization), Whisper and the services (Home
+  Assistant, MQTT, nginx, cloudflared, agent) a few gigabytes, perception a modest footprint
+  (facial recognition fits in ~350 MB). Out of 128 GB, the headroom stays comfortable — and the
+  unified memory avoids duplicating the data between CPU and GPU.</li>
+</ul>
+
+<div class="callout">
+  <div class="callout-title">The most useful tuning lever</div>
+  <p>The camera frame rate of facial recognition is the main CPU-cost knob: 10 fps gives
+  pleasant responsiveness, 5 fps halves the load for barely less comfort. It's the
+  kind of trade-off you adjust "on the fly" depending on what's running in parallel.</p>
+</div>
+
+<p>The overall lesson: it's not raw power that makes the experience fluid, it's the
+<strong>discipline of placement</strong>. A 35B LLM, vision on two different processors,
+voice and a dozen background services coexist <strong>because each was put where it
+gets in the way the least</strong> — and because the GB10's 128 GB of unified memory absorbs the whole.</p>
+
+<h2 id="nemoclaw-en">13. Going further: the NemoClaw installation guide</h2>
+
+<p>This whole ecosystem first assumes a less visible step: <strong>installing and configuring
+the machine</strong>. I documented this journey — from bringing up the DGX Spark to the
+<strong>NemoClaw</strong> stack — in a dedicated guide published on my blog.</p>
+
+<div class="callout info">
+  <div class="callout-title">Good to know</div>
+  <p>This article dates from <strong>March 2026</strong>: it isn't necessarily up to date with the latest
+  updates published since by NVIDIA, but it gives a <strong>good sense of the
+  implementation approach</strong> and the installation choices.</p>
+</div>
+
+<p>👉 <a href="https://ohoachuck.github.io/nemoclaw-dgx-spark-guide/en/" target="_blank" rel="noopener">Read the NemoClaw installation guide for the DGX Spark</a></p>
+
+<h2 id="deerflow-en">14. DeerFlow: local deep research (exploration barely begun)</h2>
+
+<div class="callout warning">
+  <div class="callout-title">Status: very early exploration</div>
+  <p>Unlike the previous building blocks (which run daily at my place), <strong>DeerFlow is
+  only at its very first steps</strong>: installed and connected, but not yet integrated or really
+  battle-tested. I mention it as a <em>lead</em>, not as an established result.</p>
+</div>
+
+<p><strong>DeerFlow</strong> (open-source, by ByteDance, built on LangGraph) is a framework for
+<strong>multi-agent "deep research"</strong>: you ask it a question, it <strong>plans</strong>
+the research, <strong>searches the web</strong> (DuckDuckGo), <strong>reads the sources</strong> (Jina)
+and <strong>synthesizes a structured report</strong> — with a sandbox to manipulate files.
+It's the open-source equivalent of a "Deep Research".</p>
+
+<p>On the DGX, it runs in containers and is <strong>connected to the local LLM</strong> (Ollama,
+<code>nemotron-3-super</code>): the reasoning stays at home, only the search queries
+go out (public data). The interface is deliberately <strong>private</strong> — reachable on
+loopback via an SSH tunnel, never exposed. The lead to dig into: a <strong>personal deep
+research assistant</strong>, whose reasoning is 100% local. To be continued.</p>
+
+<h2 id="bilan-en">15. Takeaways &amp; outlook</h2>
+
+<p>At the end of this journey, the DGX Spark turned out to be far more than a model server: a
+<strong>foundation for home "edge AI"</strong> on which an LLM service, an autonomous agent, a
+home-automation hub, computer vision and speech synthesis stacked up without getting in each other's way.</p>
+
+<h3>What the DGX makes possible</h3>
+<ul>
+  <li><strong>Privacy as a foundation, not as an option.</strong> Documents, conversations,
+  faces, the sound of the living room: everything is processed locally. It's the only acceptable
+  framework for such intimate data.</li>
+  <li><strong>The coexistence of workloads.</strong> 128 GB of unified memory + a capable GPU:
+  a 35B LLM, GPU and CPU vision, voice… run <em>together</em>, continuously.</li>
+  <li><strong>The right computation in the right place.</strong> Face on CPU, gestures on GPU, LLM on GPU:
+  you distribute so that each building block has what it needs, without starvation.</li>
+  <li><strong>Zero open port.</strong> Cloudflare (public) + Tailscale (private) cover all
+  remote access without ever punching a hole in the box.</li>
+</ul>
+
+<h3>The limits &amp; things to watch</h3>
+<ul>
+  <li><strong>Model-size ceiling</strong>: memory is finite; beyond a certain
+  size, the cloud remains relevant.</li>
+  <li><strong>Administration on your shoulders</strong>: updates, backups, configuration
+  pitfalls — a home-grown project requires maintenance (and many lessons learned along the way).</li>
+  <li><strong>Residual trusted third parties</strong>: Cloudflare and the Tailscale coordination
+  service remain in the connectivity loop — to be weighed consciously.</li>
+  <li><strong>Robustness of perception</strong>: gesture recognition depends on
+  conditions and remains perfectible.</li>
+</ul>
+
+<h3>And what's next</h3>
+<ul>
+  <li><strong>Hands-free voice</strong> for Cynthia (Apple Watch or wakeword + mic at the mirror).</li>
+  <li><strong>Moving up a tier on voice</strong> (Riva/NIM) if you want real-time
+  multi-speaker.</li>
+  <li><strong>Refining gesture recognition</strong> and enriching the gesture vocabulary.</li>
+  <li><strong>Extending the contextual pages</strong> and the agent × home automations.</li>
+</ul>
+
+<div class="callout success">
+  <div class="callout-title">In one sentence</div>
+  <p>The DGX Spark turns a home into a <strong>private, agentic AI platform</strong>:
+  powerful enough to run the models, vision and voice continuously; frugal and
+  silent enough to live in a living room; and local enough that no personal data ever
+  needs to leave it.</p>
+</div>
+
+    </div>
+  </div>
+
+</main>
+</div>
+
+<div class="ai-footer">
+  <img src="ai-icon.png" alt="AI"/>
+  <span class="lang-fr">Contenu élaboré avec le support de l'intelligence artificielle, conformément au règlement européen IA Act.</span>
+  <span class="lang-en">Content produced with the support of artificial intelligence, in line with the EU AI Act.</span>
+</div>
+
+<div class="footer">
+  <span class="lang-fr">Made with ❤️ by OHO — 19 juin 2026 (révision 8)</span>
+  <span class="lang-en">Made with ❤️ by OHO — June 19, 2026 (revision 8)</span>
+</div>
+
+<script>
+if(localStorage.getItem('theme')==='dark')document.body.classList.add('dark');
+function applyLang(l){
+  document.documentElement.setAttribute('data-lang', l);
+  document.documentElement.lang = l;
+  var b = document.getElementById('lang-toggle');
+  if(b) b.textContent = (l === 'fr' ? 'EN' : 'FR');
+  document.title = (l === 'fr'
+    ? "Retour d'expérience — DGX Spark : un « Edge IA » domestique"
+    : "Field report — DGX Spark: a home \"Edge AI\"");
+  try { localStorage.setItem('lang', l); } catch(e) {}
+}
+function toggleLang(){
+  applyLang(document.documentElement.getAttribute('data-lang') === 'fr' ? 'en' : 'fr');
+}
+(function(){
+  var saved = null; try { saved = localStorage.getItem('lang'); } catch(e) {}
+  var l = saved || (((navigator.language||'').toLowerCase().indexOf('fr') === 0) ? 'fr' : 'en');
+  applyLang(l);
+})();
+(function(){
+  var header = document.getElementById('site-header');
+  if(!header) return;
+  function sync(){ document.documentElement.style.setProperty('--header-height', header.offsetHeight + 'px'); }
+  function onScroll(){ if(window.scrollY > 24) header.classList.add('scrolled'); else header.classList.remove('scrolled'); sync(); }
+  sync();
+  window.addEventListener('scroll', onScroll, {passive:true});
+  window.addEventListener('resize', sync, {passive:true});
+})();
+</script>
+
+</body>
+</html>
