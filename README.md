@@ -51,6 +51,8 @@ export DGXMON_OLLAMA=127.0.0.1:15000   # host:port, or a full http://host:port
 > Tailored to the **DGX Spark (GB10, unified memory)**. On a discrete-GPU DGX the memory panel
 > wouldn't apply as-is.
 
+**License**: MIT — see [`dgx-mon/LICENSE`](dgx-mon/LICENSE).
+
 ---
 
 This repository also hosts the **published static page** (`index.html` + `images/`), served by
