@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Olivier HO-A-CHUCK
 """dgx-mon — moniteur ressources temps réel du DGX Spark (CPU · GPU · mémoire · Ollama · conteneurs).
 
 À lancer SUR le DGX (a besoin de /proc, nvidia-smi, docker, et de l'API Ollama locale).
