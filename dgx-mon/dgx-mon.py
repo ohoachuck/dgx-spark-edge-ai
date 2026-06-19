@@ -32,7 +32,7 @@ def _ollama_url() -> str:
     """URL de l'API Ollama /api/ps. Par défaut le port standard d'Ollama
     (127.0.0.1:11434 — install systemd standard sur DGX Spark). Surchargeable via
     la variable d'env DGXMON_OLLAMA si Ollama écoute ailleurs — ex. dans ton
-    ~/.bashrc : export DGXMON_OLLAMA=127.0.0.1:12001 (ou "http://hote:port").
+    ~/.bashrc : export DGXMON_OLLAMA=127.0.0.1:15000 (ou "http://hote:port").
     NB : on N'utilise PAS OLLAMA_HOST, réservée au serveur/CLI Ollama lui-même."""
     env = os.environ.get("DGXMON_OLLAMA", "").strip()
     if not env:

@@ -45,7 +45,7 @@ the machine.
 If your Ollama listens elsewhere (e.g. running in a container on another port), point the monitor
 at it with an environment variable — no code edit needed:
 ```bash
-export DGXMON_OLLAMA=127.0.0.1:12001   # host:port, or a full http://host:port
+export DGXMON_OLLAMA=127.0.0.1:15000   # host:port, or a full http://host:port
 ```
 
 > Tailored to the **DGX Spark (GB10, unified memory)**. On a discrete-GPU DGX the memory panel
@@ -53,6 +53,5 @@ export DGXMON_OLLAMA=127.0.0.1:12001   # host:port, or a full http://host:port
 
 ---
 
-This repository also hosts the **published static page** (`index.html` + `images/`), generated
-from build sources kept in a separate workspace and published via a small `deploy.sh`
-(build → sync → push). GitHub Pages serves it from the `main` branch root.
+This repository also hosts the **published static page** (`index.html` + `images/`), served by
+GitHub Pages from the `main` branch root.
