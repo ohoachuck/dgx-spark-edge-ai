@@ -33,8 +33,3 @@ learned** — a Spark in a closed cabinet during a heatwave shutting *itself* of
 → **[thermal-tools/README.md](thermal-tools/README.md)**
 
 [![A DGX Spark powering itself off in an enclosed space during a heatwave](thermal-tools/temperature-chart.png)](thermal-tools/)
-
----
-
-This repository also hosts the **published static page** (`index.html` + `images/`), served by
-GitHub Pages from the `main` branch root.
