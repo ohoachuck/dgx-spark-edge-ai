@@ -5,7 +5,9 @@
 # before hammering the GPU/SoC, on a machine with little active-cooling headroom.
 #
 # Part of: https://github.com/ohoachuck/dgx-spark-edge-ai (thermal-tools)
-# Author: Olivier HO-A-CHUCK — MIT License.
+# Author: directed & reviewed by Olivier HO-A-CHUCK — and, in all honesty (and good
+#         EU AI Act spirit), heavily written by an AI (Claude). Bugs are a joint effort.
+# License: MIT.
 #
 # Usage:
 #   thermal-gate            exit 0 if cool, 1 if too hot   ->  thermal-gate && heavy_job

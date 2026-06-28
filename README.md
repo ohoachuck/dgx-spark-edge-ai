@@ -32,7 +32,7 @@ learned** — a Spark in a closed cabinet during a heatwave shutting *itself* of
 **below** the 104 °C OS limit, with the temperature chart to prove it.
 → **[thermal-tools/README.md](thermal-tools/README.md)**
 
-[![A DGX Spark powering itself off in an enclosed space during a heatwave](thermal-tools/temperature-chart.svg)](thermal-tools/)
+[![A DGX Spark powering itself off in an enclosed space during a heatwave](thermal-tools/temperature-chart.png)](thermal-tools/)
 
 ---
 

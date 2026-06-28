@@ -7,7 +7,9 @@
 # start, thermal-run caps the temperature once you have.
 #
 # Part of: https://github.com/ohoachuck/dgx-spark-edge-ai (thermal-tools)
-# Author: Olivier HO-A-CHUCK — MIT License.
+# Author: directed & reviewed by Olivier HO-A-CHUCK — and, in all honesty (and good
+#         EU AI Act spirit), heavily written by an AI (Claude). Bugs are a joint effort.
+# License: MIT.
 #
 # Usage: thermal-run <command> [args...]
 # Env  : THERMAL_KILL (default 90 °C), THERMAL_POLL (default 5 s), THERMAL_LOG

@@ -19,7 +19,7 @@ had shut down, and it would not come back until power-cycled by hand.
 So I logged the on-die temperature every 2 minutes and watched. The pattern was identical three
 days in a row:
 
-![A DGX Spark powering itself off in an enclosed space during a heatwave](temperature-chart.svg)
+![A DGX Spark powering itself off in an enclosed space during a heatwave](temperature-chart.png)
 
 - **Overnight it sat cool**, ~55–65 °C.
 - At a fixed time a **scheduled heavy job** kicked in (a headless-browser scrape). Within
@@ -118,3 +118,7 @@ DGX). Works on any Linux box; the thresholds are tuned for the GB10's behaviour.
 - **Placement and airflow remain the actual fix.** Treat this as a seatbelt, not an engine.
 
 **License**: MIT — see [`LICENSE`](LICENSE).
+
+> *Authorship, plainly (and in good EU AI Act spirit): directed & reviewed by a human
+> (Olivier HO-A-CHUCK), heavily written by an AI (Claude). The idea is human, most of the
+> typing isn't, and the bugs are a joint effort.*
