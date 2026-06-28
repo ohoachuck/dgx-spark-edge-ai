@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# thermal-run — run a heavy command with a thermal kill-switch. If the max
+# temperature crosses THERMAL_KILL (°C) WHILE the command is running, the command
+# (and its whole process group) is killed, to keep the machine from tripping its
+# hardware power-off. The companion of thermal-gate: the gate decides whether to
+# start, thermal-run caps the temperature once you have.
+#
+# Part of: https://github.com/ohoachuck/dgx-spark-edge-ai (thermal-tools)
+# Author: Olivier HO-A-CHUCK — MIT License.
+#
+# Usage: thermal-run <command> [args...]
+# Env  : THERMAL_KILL (default 90 °C), THERMAL_POLL (default 5 s), THERMAL_LOG
+set -uo pipefail
+KILL="${THERMAL_KILL:-90}"; POLL="${THERMAL_POLL:-5}"
+GLOG="${THERMAL_LOG:-$HOME/thermal-run.log}"
+SELF_DIR="$(cd "$(dirname "$0")" && pwd)"; GATE="$SELF_DIR/thermal-gate"
+
+# reuse thermal-gate's reading if present, else read directly (kept self-contained)
+temp() {
+  if [ -x "$GATE" ]; then "$GATE" temp 2>/dev/null || echo 0; return; fi
+  local g m=0 v
+  g=$(nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null | head -1 | tr -dc '0-9')
+  for z in /sys/class/thermal/thermal_zone*/temp; do v=$(cat "$z" 2>/dev/null || echo 0); v=$((v/1000)); [ "$v" -gt "$m" ] && m=$v; done
+  [ -n "${g:-}" ] && [ "$g" -gt "$m" ] 2>/dev/null && m=$g
+  echo "$m"
+}
+
+[ $# -ge 1 ] || { echo "usage: thermal-run <command> [args...]" >&2; exit 2; }
+
+setsid "$@" & pid=$!                 # run the command as its own process group
+( while kill -0 "$pid" 2>/dev/null; do
+    t=$(temp)
+    if [ "${t:-0}" -ge "$KILL" ] 2>/dev/null; then
+      echo "$(date '+%F %T')  thermal-run KILL ${t}C >= ${KILL}C — $*" >> "$GLOG"
+      kill -TERM -"$pid" 2>/dev/null; sleep 3; kill -KILL -"$pid" 2>/dev/null
+      break
+    fi
+    sleep "$POLL"
+  done ) & wd=$!
+wait "$pid"; rc=$?
+kill "$wd" 2>/dev/null; wait "$wd" 2>/dev/null
+exit "$rc"

@@ -11,47 +11,28 @@ Use the **FR / EN** button (top-right) to switch language; the choice is remembe
 
 ---
 
-## `dgx-mon` — a terminal resource monitor for the DGX Spark
+## Tools in this repo
 
-A small, dependency-light Python TUI to watch, **in real time**, what your DGX Spark is doing —
-CPU, the GB10's **unified memory**, GPU, which Ollama model is loaded, and which containers eat
-what. Handy to *see* a model spin up and the power draw climb when inference starts.
+Small, focused, dependency-light utilities born out of actually living with a Spark. Each is its
+own self-contained sub-project, with its own README and MIT license.
 
-![dgx-mon running on a DGX Spark](dgx-mon/dgx-mon.png)
+### 📊 [`dgx-mon`](dgx-mon/) — real-time resource monitor
 
-**What each panel shows**
-- **CPU (Grace, Arm)** — utilisation, core count, 1/5/15-min load average.
-- **Unified memory** — used / total, available, cache, *how much the GPU holds* (it's the **same
-  pool** on GB10), and swap. This is the metric that matters most on a Spark.
-- **GPU GB10 (Blackwell)** — compute %, VRAM (**derived from GPU processes**, because `nvidia-smi`
-  reports N/A on unified memory), temperature, power draw.
-- **Loaded Ollama models** — name, size, CPU/GPU split, context, time-to-unload.
-- **GPU processes** — PID, process, GPU memory.
-- **Docker containers** — sorted by memory (CPU %, memory, mem %).
+A terminal TUI to watch what your Spark is doing **live**: CPU (Grace), the GB10's **unified
+memory**, GPU, the loaded Ollama model and the containers — the metrics that actually matter on a
+unified-memory machine. → **[dgx-mon/README.md](dgx-mon/README.md)**
 
-**Run it (on the DGX)**
-```bash
-pip install rich          # only dependency
-python3 dgx-mon.py        # live view, refreshes continuously (Ctrl-C to quit)
-python3 dgx-mon.py --once # single snapshot (good for logs/SSH)
-python3 dgx-mon.py -i 2   # custom refresh interval (seconds)
-```
+[![dgx-mon](dgx-mon/dgx-mon.png)](dgx-mon/)
 
-**Requirements**: Python 3.10+, `rich`, plus `nvidia-smi`, `docker` and a local Ollama API on
-the machine.
+### 🌡️ [`thermal-tools`](thermal-tools/) — keep it alive under heavy load in the heat
 
-**Ollama endpoint**: defaults to the standard `127.0.0.1:11434` (the systemd install used by the
-[NVIDIA DGX Spark playbooks](https://github.com/NVIDIA/dgx-spark-playbooks/tree/main/nvidia/ollama)).
-If your Ollama listens elsewhere (e.g. running in a container on another port), point the monitor
-at it with an environment variable — no code edit needed:
-```bash
-export DGXMON_OLLAMA=127.0.0.1:15000   # host:port, or a full http://host:port
-```
+`thermal-gate` + `thermal-run`: two tiny Bash helpers so any job can avoid pushing the Spark into
+its **own hardware power-off** when it heats up faster than it can cool. Includes the **lesson
+learned** — a Spark in a closed cabinet during a heatwave shutting *itself* off every morning,
+**below** the 104 °C OS limit, with the temperature chart to prove it.
+→ **[thermal-tools/README.md](thermal-tools/README.md)**
 
-> Tailored to the **DGX Spark (GB10, unified memory)**. On a discrete-GPU DGX the memory panel
-> wouldn't apply as-is.
-
-**License**: MIT — see [`dgx-mon/LICENSE`](dgx-mon/LICENSE).
+[![A DGX Spark powering itself off in an enclosed space during a heatwave](thermal-tools/temperature-chart.svg)](thermal-tools/)
 
 ---
 

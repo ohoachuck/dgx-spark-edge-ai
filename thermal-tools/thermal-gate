@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# thermal-gate — a tiny, dependency-free "thermal gate" for the NVIDIA DGX Spark
+# (GB10). Lets ANY script ask "is it cool enough to run a heavy job right now?"
+# before hammering the GPU/SoC, on a machine with little active-cooling headroom.
+#
+# Part of: https://github.com/ohoachuck/dgx-spark-edge-ai (thermal-tools)
+# Author: Olivier HO-A-CHUCK — MIT License.
+#
+# Usage:
+#   thermal-gate            exit 0 if cool, 1 if too hot   ->  thermal-gate && heavy_job
+#   thermal-gate temp       print the current max temperature (°C)
+#   thermal-gate check      same as the default gate, plus a one-line status on stderr
+#   thermal-gate wait [N]   block until it cools down (or N seconds timeout)
+#
+# Threshold: THERMAL_LIMIT env var (default 80 °C). Reads the GPU (nvidia-smi) and
+# every ACPI thermal zone, and uses the hottest of them.
+set -uo pipefail
+LIMIT="${THERMAL_LIMIT:-80}"
+
+max_temp() {
+  local g m=0 v
+  g=$(nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null | head -1 | tr -dc '0-9')
+  for z in /sys/class/thermal/thermal_zone*/temp; do
+    v=$(cat "$z" 2>/dev/null || echo 0); v=$((v / 1000))
+    [ "$v" -gt "$m" ] && m=$v
+  done
+  [ -n "${g:-}" ] && [ "$g" -gt "$m" ] 2>/dev/null && m=$g
+  echo "$m"
+}
+
+case "${1:-gate}" in
+  temp)
+    max_temp ;;
+  gate|check)
+    t=$(max_temp)
+    if [ "$t" -lt "$LIMIT" ]; then
+      [ "${1:-}" = check ] && echo "thermal-gate: OK ${t}C < ${LIMIT}C" >&2
+      exit 0
+    else
+      [ "${1:-}" = check ] && echo "thermal-gate: TOO HOT ${t}C >= ${LIMIT}C" >&2
+      exit 1
+    fi ;;
+  wait)
+    to="${2:-600}"; w=0
+    while :; do
+      t=$(max_temp)
+      [ "$t" -lt "$LIMIT" ] && exit 0
+      [ "$w" -ge "$to" ] && exit 1
+      sleep 15; w=$((w + 15))
+    done ;;
+  *)
+    echo "usage: thermal-gate [gate|check|temp|wait [seconds]]   (THERMAL_LIMIT=${LIMIT})" >&2
+    exit 2 ;;
+esac
